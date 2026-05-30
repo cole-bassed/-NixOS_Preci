@@ -3,7 +3,102 @@
   pkgs,
   dots,
   ...
-}: {
+}:
+let
+apps=config.programs;
+  dotsRun = pkgs.writeShellApplication {
+    name = "dots-run";
+
+    runtimeInputs = with pkgs; [
+      coreutils
+      findutils
+      gnugrep
+      sudo
+    ];
+
+    text = ''
+      dots="''${DOTS:-${dots}}"
+
+      if [ "$#" -eq 0 ]; then
+        echo "usage: dots-run <command> [args...]" >&2
+        exit 2
+      fi
+
+      dots_writable() {
+        [ -w "$dots" ] &&
+          ! find "$dots" -not -user "$(id -un)" -print -quit | grep -q .
+      }
+
+      if dots_writable; then
+        "$@"
+      else
+        sudo "$@"
+      fi
+    '';
+  };
+
+  dotsEdit = pkgs.writeShellApplication {
+    name = "dots-edit";
+
+    runtimeInputs = [
+      dotsRun
+    ];
+
+    text = ''
+      editor="''${EDITOR:-hx}"
+      dots="''${DOTS:-${dots}}"
+
+      dots-run "$editor" "$dots"
+    '';
+  };
+
+  dotsCode = pkgs.writeShellApplication {
+    name = "dots-code";
+
+    runtimeInputs = [
+      dotsRun
+    ];
+
+    text = ''
+      visual="''${VISUAL:-code}"
+      dots="''${DOTS:-${dots}}"
+
+      dots-run "$visual" "$dots"
+    '';
+  };
+
+  dotsFormat = pkgs.writeShellApplication {
+    name = "dots-format";
+
+    runtimeInputs = with pkgs; [
+      alejandra
+      dotsRun
+    ];
+
+    text = ''
+      dots="''${DOTS:-${dots}}"
+
+      dots-run alejandra "$dots"
+    '';
+  };
+
+  dotsUpdate = pkgs.writeShellApplication {
+    name = "dots-update";
+
+    runtimeInputs = with pkgs; [
+      nix
+      dotsRun
+    ];
+
+    text = ''
+      dots="''${DOTS:-${dots}}"
+
+      cd "$dots"
+      dots-run nix flake update
+    '';
+  };
+in
+{
   nix = {
     settings.experimental-features = [
       "nix-command"
@@ -17,19 +112,30 @@
       EDITOR = "hx";
       VISUAL = "code";
     };
-    shellAliases = {
-      ede-dots = "$EDITOR ${dots}";
-      ide-dots = "$VISUAL ${dots}";
 
-      up = "cd ${dots} && sudo nix flake update";
-      hix = "sudo hx ${dots}";
-      fix = "sudo alejandra ${dots}";
-      llx = "ll ${dots}";
-      ltx = "lt ${dots}";
-      ltr = "lr ${dots}";
-      switch = "nh os switch ${dots}";
+    shellAliases = {
+      ede-dots = "dots-edit";
+      ide-dots = "dots-code";
+
+      up = "dots-update";
+      hix = "dots-edit";
+      fix = "dots-format";
+
+      llx = ''ll "$DOTS"'';
+      ltx = ''lt "$DOTS"'';
+      ltr = ''lr "$DOTS"'';
+
+      switch = ''nh os switch "$DOTS"'';
     };
+
     systemPackages = with pkgs; [
+      #~@ dotDots - helper commands
+      dotsRun # ? Run commands against DOTS with sudo only when needed
+      dotsEdit # ? Open DOTS using EDITOR with sudo only when needed
+      dotsCode # ? Open DOTS using VISUAL with sudo only when needed
+      dotsFormat # ? Format DOTS using alejandra with sudo only when needed
+      dotsUpdate # ? Update DOTS flake lock with sudo only when needed
+
       #~@ Nix - formatters, LSPs, cache, prefetchers
       alejandra # ? Opinionated Nix formatter (primary)
       nixfmt # ? RFC-style Nix formatter (secondary)
@@ -58,7 +164,7 @@
       gnome-randr # ? Display configuration for GNOME/Wayland
       wlr-randr # ? Display configuration for wlroots WMs
       # wl-clipboardi #? Command-line copy/paste utilities for Wayland
-      wl-clipboard-rs # ? Command-line copy/paste utilities for Wayland, written in Rust
+      wl-clipboard-rs # ? Command-line copy/paste utilities for Wayland, written with Rust
       procs # ? Modern ps replacement with tree view
 
       #~@ Files - navigation, search, sync, cleanup
@@ -78,8 +184,6 @@
       #~@ Network - transfer, GitHub
       curl # ? Command-line HTTP client
       wget # ? Non-interactive network downloader
-      gh # ? Official GitHub CLI
-      gitui # ? Fast terminal UI for Git
 
       #~@ Dev - editors, VCS, data, media
       # bat # ? Cat clone with syntax highlighting and paging
@@ -99,6 +203,8 @@
     ];
   };
 
+  
+
   programs = {
     bash = {
       enable = true;
@@ -110,9 +216,11 @@
       };
       vteIntegration = true;
     };
+
     bcc = {
       enable = true;
     };
+
     direnv = {
       enable = true;
       silent = true;
@@ -123,36 +231,37 @@
         };
       };
     };
+
     git = {
       enable = true;
       lfs.enable = true;
       prompt.enable = true;
       config = {
-        init = {defaultBranch = "main";};
-        url = {"https://github.com/" = {insteadOf = ["gh:" "github:"];};};
+        init = {
+          defaultBranch = "main";
+        };
       };
     };
+
     bat = {
       enable = true;
       extraPackages = with pkgs.bat-extras; [
-        batdiff
-        batman
-        prettybat
+        # batdiff
+        # batman
+        # prettybat
       ];
-      settings = {
-        italic-text = "always";
-        pager = "less --RAW-CONTROL-CHARS --quit-if-one-screen --mouse";
-        # paging = "never";
-        # theme = "TwoDark";
-      };
+      settings = {};
     };
+
     fzf = {
       fuzzyCompletion = true;
       keybindings = true;
     };
+
     starship = {
       enable = true;
     };
+
     nh = {
       enable = true;
       flake = dots;
@@ -162,17 +271,18 @@
         extraArgs = "--keep 5 --keep-since 3d";
       };
     };
+
     television = {
       enable = true;
-      enableBashIntegration = config.programs.bash.enable;
-      enableFishIntegration = config.programs.fish.enable;
-      enableZshIntegration = config.programs.zsh.enable;
+      enableBashIntegration = apps.bash.enable;
+      enableFishIntegration = apps.fish.enable;
+      enableZshIntegration = apps.zsh.enable;
     };
+
     tmux = {
       enable = true;
     };
   };
 
-  services = {
-  };
+  services = {};
 }

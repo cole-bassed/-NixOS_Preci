@@ -59,5 +59,5 @@
           // {inherit inputs alpha dots;}
           // extraArgs;
       };
-  in {nixosConfigurations.Preci = mkNix {};};
+  in {nixosConfigurations.Preci = mkNix {dots = "/home/craole/.dots";};};
 }

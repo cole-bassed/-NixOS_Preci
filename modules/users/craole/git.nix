@@ -1,9 +1,11 @@
+
 {
   config,
   lib,
   pkgs,
   ...
-}: let
+}:
+let
   inherit (lib.attrsets) attrValues mapAttrs mapAttrs';
 
   home = config.home.homeDirectory;
@@ -15,7 +17,6 @@
   };
 
   default = "craole";
-
   projectRoot = "${home}/Projects";
 
   repos =
@@ -23,13 +24,14 @@
       "${home}/.dots/" = "craole-cc";
     }
     // mapAttrs'
-    (
-      profile: _: {
-        name = "${projectRoot}/${profile}/";
-        value = profile;
-      }
-    )
-    profiles;
+      (
+        profile: _:
+          {
+            name = "${projectRoot}/${profile}/";
+            value = profile;
+          }
+      )
+      profiles;
 
   mkUser = profile: {
     name = profile;
@@ -44,85 +46,87 @@
   };
 
   mkGithubHost = profile: {
-    hostname = "github.com";
-    user = "git";
-    identityFile = "${home}/.ssh/github/${profile}";
-    identitiesOnly = true;
+    HostName = "github.com";
+    User = "git";
+    IdentityFile = "${home}/.ssh/github/${profile}";
+    IdentitiesOnly = true;
   };
 
-  ghClone = pkgs.writeShellApplication {
-    name = "gh-clone";
+  ghClone =
+    pkgs.writeShellApplication {
+      name = "gh-clone";
 
-    runtimeInputs = with pkgs; [
-      coreutils
-      git
-    ];
+      runtimeInputs = with pkgs; [
+        coreutils
+        git
+      ];
 
-    text = ''
-      usage() {
-        cat <<'EOF'
-      usage:
-        gh-clone <profile> <owner/repo>
-        gh-clone <profile> <owner/repo> <target-name>
+      text = ''
+        usage() {
+          cat <<'EOF'
+usage:
+  gh-clone <profile> <owner/repo>
+  gh-clone <profile> <owner/repo> <target-name>
 
-      examples:
-        gh-clone craole-cc craole-cc/dots
-        gh-clone craole Craole/example
-        gh-clone cole-bassed cole-bassed/site website
-      EOF
-      }
+examples:
+  gh-clone craole-cc craole-cc/dots
+  gh-clone craole Craole/example
+  gh-clone cole-bassed cole-bassed/site website
+EOF
+        }
 
-      profile="''${1:-}"
-      repo="''${2:-}"
-      target="''${3:-}"
+        profile="''${1:-}"
+        repo="''${2:-}"
+        target="''${3:-}"
 
-      if [ -z "$profile" ] || [ -z "$repo" ]; then
-        usage
-        exit 2
-      fi
-
-      case "$profile" in
-        craole|craole-cc|cole-bassed)
-          ;;
-        *)
-          echo "error: unknown profile: $profile" >&2
-          echo "valid profiles: craole, craole-cc, cole-bassed" >&2
+        if [ -z "$profile" ] || [ -z "$repo" ]; then
+          usage
           exit 2
-          ;;
-      esac
+        fi
 
-      case "$repo" in
-        */*)
-          ;;
-        *)
-          echo "error: repo must look like owner/repo" >&2
-          exit 2
-          ;;
-      esac
+        case "$profile" in
+          craole|craole-cc|cole-bassed)
+            ;;
+          *)
+            echo "error: unknown profile: $profile" >&2
+            echo "valid profiles: craole, craole-cc, cole-bassed" >&2
+            exit 2
+            ;;
+        esac
 
-      owner="''${repo%%/*}"
-      name="''${repo##*/}"
-      name="''${name%.git}"
+        case "$repo" in
+          */*)
+            ;;
+          *)
+            echo "error: repo must look like owner/repo" >&2
+            exit 2
+            ;;
+        esac
 
-      if [ -z "$target" ]; then
-        target="$name"
-      fi
+        owner="''${repo%%/*}"
+        name="''${repo##*/}"
+        name="''${name%.git}"
 
-      base="${projectRoot}/$profile"
-      dest="$base/$target"
-      url="git@github_$profile:$owner/$name.git"
+        if [ -z "$target" ]; then
+          target="$name"
+        fi
 
-      mkdir -p "$base"
+        base="${projectRoot}/$profile"
+        dest="$base/$target"
+        url="git@github_$profile:$owner/$name.git"
 
-      if [ -e "$dest" ]; then
-        echo "error: destination already exists: $dest" >&2
-        exit 1
-      fi
+        mkdir -p "$base"
 
-      git clone "$url" "$dest"
-    '';
-  };
-in {
+        if [ -e "$dest" ]; then
+          echo "error: destination already exists: $dest" >&2
+          exit 1
+        fi
+
+        git clone "$url" "$dest"
+      '';
+    };
+in
+{
   home.packages = [
     ghClone
   ];
@@ -131,42 +135,48 @@ in {
     git = {
       enable = true;
 
-      userName = (mkUser default).name;
-      userEmail = (mkUser default).email;
-
-      lfs.enable = true;
-
-      delta = {
+      lfs = {
         enable = true;
-
-        options = {
-          navigate = true;
-          side-by-side = true;
-        };
       };
 
-      extraConfig = {
-        init.defaultBranch = "main";
+      settings = {
+        user = mkUser default;
 
-        pull.rebase = true;
-        rebase.autoStash = true;
+        init = {
+          defaultBranch = "main";
+        };
 
-        push.autoSetupRemote = true;
+        pull = {
+          rebase = true;
+        };
 
-        core.editor = "hx";
+        rebase = {
+          autoStash = true;
+        };
 
-        merge.conflictStyle = "zdiff3";
+        push = {
+          autoSetupRemote = true;
+        };
+
+        core = {
+          editor = "hx";
+        };
+
+        merge = {
+          conflictStyle = "zdiff3";
+        };
       };
 
       includes = attrValues (mapAttrs mkGitInclude repos);
     };
 
-    gh = {
+    delta = {
       enable = true;
+      enableGitIntegration = true;
 
-      settings = {
-        git_protocol = "ssh";
-        prompt = "enabled";
+      options = {
+        navigate = true;
+        side-by-side = true;
       };
     };
 
@@ -174,29 +184,27 @@ in {
       enable = true;
     };
 
-    lazygit = {
-      enable = true;
-    };
-    delta = {
-      enable = true;
-
-      options = {
-        navigate = true;
-        side-by-side = true;
-      };
-    };
     ssh = {
       enable = true;
+      enableDefaultConfig = false;
 
-      matchBlocks =
-        mapAttrs'
-        (
-          profile: _: {
-            name = "github_${profile}";
-            value = mkGithubHost profile;
-          }
-        )
-        profiles;
+      settings =
+        {
+          "*" = {
+            AddKeysToAgent = "no";
+            ForwardAgent = false;
+            ServerAliveInterval = 0;
+          };
+        }
+        // mapAttrs'
+          (
+            profile: _:
+              {
+                name = "github_${profile}";
+                value = mkGithubHost profile;
+              }
+          )
+          profiles;
     };
   };
 }
