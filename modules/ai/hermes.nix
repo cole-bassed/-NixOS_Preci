@@ -3,33 +3,27 @@
   inputs,
   pkgs,
   ...
-}:
-let
+}: let
   inherit (inputs) hermes-agent;
+
   hermesGateway = pkgs.writeShellApplication {
     name = "hermes-gateway";
 
-    runtimeInputs = with pkgs; [
-      sudo
-    ];
-
     text = ''
-      exec sudo -u hermes \
-        HERMES_HOME=/var/lib/hermes/.hermes \
-        HOME=/var/lib/hermes \
-        hermes "$@"
+      exec /run/wrappers/bin/sudo -u hermes \
+        env \
+          HERMES_HOME=/var/lib/hermes/.hermes \
+          HOME=/var/lib/hermes \
+          /run/current-system/sw/bin/hermes "$@"
     '';
   };
 
-  secrets = {
-    env = "services/hermes/env";
-  };
-in
-{
-  imports = [ hermes-agent.nixosModules.default ];
+  secrets.env = "services/hermes/env";
+in {
+  imports = [hermes-agent.nixosModules.default];
 
   environment = {
-    systemPackages = [ hermesGateway ];
+    systemPackages = [hermesGateway];
   };
 
   services = {
@@ -52,7 +46,7 @@ in
           default = "gpt-5.5-codex";
         };
 
-        toolsets = [ "all" ];
+        toolsets = ["all"];
 
         max_turns = 100;
 
