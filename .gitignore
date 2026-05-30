@@ -1,0 +1,64 @@
+# ── Plaintext secrets / local secret material ────────────────────────────────
+*.age-key
+*.key
+*.pem
+*.p12
+*.pfx
+*.asc
+*.gpg
+*.kdbx
+
+# Never commit raw SSH private keys
+id_rsa
+id_rsa.*
+id_ed25519
+id_ed25519.*
+id_ecdsa
+id_ecdsa.*
+id_dsa
+id_dsa.*
+
+# Local age/sops key material
+.config/age/
+.config/sops/
+age/keys.txt
+sops/age/keys.txt
+
+# Temporary plaintext secret staging files
+secrets/*.plain.*
+secrets/*.decrypted.*
+secrets/*.unencrypted.*
+secrets/*.tmp
+secrets/*.bak
+secrets/*.orig
+
+# Keep encrypted sops files tracked
+!secrets/*.yaml
+!secrets/*.yml
+!secrets/*.json
+!secrets/*.env
+
+# ── Nix outputs / build links ────────────────────────────────────────────────
+result
+result-*
+/build
+/dist
+/out
+
+# ── Direnv / envrc caches ───────────────────────────────────────────────────
+.direnv/
+.envrc.local
+
+# ── Editor / tooling noise ──────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# ── Logs / temporary files ──────────────────────────────────────────────────
+*.log
+*.tmp
+*.temp
+.cache/
