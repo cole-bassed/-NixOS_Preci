@@ -1,6 +1,5 @@
-# ./modules/ai/hermes.nix
 {
-  config,
+  config,pkgs,
   inputs,
   ...
 }: let
@@ -116,4 +115,7 @@ in {
   };
 
   virtualisation.docker.enable=true;
+    environment.systemPackages = [
+    pkgs.python313Packages.python-telegram-bot
+  ];
 }
