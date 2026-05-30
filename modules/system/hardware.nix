@@ -93,7 +93,6 @@
   };
 
   services = {
-    openssh.enable = true;
     kmscon.enable = true;
     getty = {
       autologinOnce = true;
