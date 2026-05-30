@@ -4,6 +4,7 @@
     ./foot
     ./git
     ./keyd
+    ./keybinds
     ./kitty
     ./starship
   ];

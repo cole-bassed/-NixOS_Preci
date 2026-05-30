@@ -1,7 +1,14 @@
-{osConfig, top, ...}: {
+{
+  osConfig,
+  top,
+  ...
+}: {
   ${top} = {
     applications = {
       git = {
+        enable = true;
+      };
+      keybinds = {
         enable = true;
       };
       starship = {

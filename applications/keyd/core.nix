@@ -17,10 +17,10 @@ in {
 
     ids = mkOption {
       type = listOf str;
-      default = [""];
+      default = ["*"];
       description = ''
-        keyd keyboard ids to target. The current default preserves the previous
-        temporary global fallback until the RK71-specific device id is known.
+        keyd keyboard ids to target. The current default keeps the temporary
+        global fallback active until the RK71-specific device id is known.
       '';
     };
 
