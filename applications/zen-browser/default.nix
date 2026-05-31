@@ -1,16 +1,16 @@
 {inputs, ...}: {
   imports = [
     inputs.zen-browser.homeModules.twilight
-    ./options/general.nix
-    ./options/policies.nix
-    ./options/profile/bookmarks.nix
-    ./options/profile/containers.nix
-    ./options/profile/keyboard.nix
-    ./options/profile/pins.nix
-    ./options/profile/search.nix
-    ./options/profile/settings.nix
-    ./options/profile/spaces.nix
-    ./options/profile/style.nix
+    ./bookmarks.nix
+    ./containers.nix
+    ./general.nix
+    ./keyboard.nix
+    ./pins.nix
+    ./policies.nix
     ./program.nix
+    ./search.nix
+    ./settings.nix
+    ./spaces.nix
+    ./style.nix
   ];
 }
