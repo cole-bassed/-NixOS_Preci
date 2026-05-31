@@ -8,7 +8,7 @@
   inherit (lib) mkDefault mkEnableOption mkIf mkOption;
   inherit (lib.types) nullOr package str;
 
-  dom = "applications";
+  dom = "interface";
   mod = "browsers";
 
   cfg = config.${top}.${dom}.${mod};

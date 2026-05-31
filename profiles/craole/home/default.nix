@@ -5,13 +5,16 @@
 }: {
   ${top} = {
     interface = {
+      browsers = {
+        enable = true;
+      };
       keybinds = {
         enable = true;
       };
     };
 
     applications = {
-      browsers = {
+      zen-browser = {
         enable = true;
       };
       git = {
