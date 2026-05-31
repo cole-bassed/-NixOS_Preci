@@ -1,271 +1,117 @@
+# libraries/default.nix
+#
+# Assembles all libs in dependency order.
+#
+# Each lib has the shape:
+#   { internal = { ... }; external = { ... }; }
+#
+#   internal → used here when wiring deps between libs
+#             → becomes lix.<libname> (so lix.lists.nthOr, lix.lists.atOr)
+#   external → collision-checked and promoted to flat lix.* namespace
+#             → so lix.valueInList, lix.mkNix, etc.
+#
+# Usage in flake:
+#   lix = import ./libraries { inherit inputs lib defaults; };
+#
 {
   inputs,
   lib,
-  nixosSystem,
   defaults,
 }: let
-  inherit
-    (lib.attrsets)
-    attrByPath
-    filterAttrs
-    genAttrs
-    mapAttrs
-    mapAttrsToList
-    setAttrByPath
-    ;
-  inherit (lib.filesystem) baseNameOf pathIsRegularFile readDir;
-  inherit (lib.lists) concatMap elem filter findFirst optionals toList;
-  inherit (lib.options) mkEnableOption;
-  inherit (lib.strings) hasSuffix removeSuffix;
-  inherit (lib.trivial) isFunction;
+  inherit (lib.lists) foldl';
 
-  mkNix = {
-    alpha ? defaults.user,
-    dots ? defaults.dots,
-    extraArgs ? {},
-    modules ? defaults.modules,
-    system ? defaults.system,
-    top ? defaults.top,
-  }:
-    nixosSystem {
-      inherit modules system;
-      specialArgs =
-        {inherit inputs alpha dots top;}
-        // extraArgs;
-    };
+  # ── 1. assemble in dependency order ───────────────────────────────────────
 
-  mkNixConfigurations = extraArgs: {
-    nixosConfigurations =
-      mapAttrs
-      (name: config: mkNix (config // {inherit extraArgs;}))
-      extraArgs.hosts or defaults.api.hosts;
+  predicates = import ./predicates.nix {inherit lib;};
+  lists = import ./lists.nix {inherit lib;};
+  debug = import ./debug.nix {inherit lib;};
+  options = import ./options.nix {inherit lib defaults;};
+
+  strings = import ./strings.nix {
+    inherit lib;
+    debug = debug.internal;
+    predicates = predicates.internal;
+  };
+  attrsets = import ./attrsets.nix {
+    inherit lib;
+    lists = lists.internal;
+  };
+  modules = import ./modules.nix {
+    inherit lib defaults;
+    lists = lists.internal;
+    predicates = predicates.internal;
+  };
+  system = import ./system.nix {
+    inherit lib inputs defaults;
+    modules = modules.internal;
   };
 
-  mkEnable = {
-    name ? null,
-    mod ? null,
-    description ? null,
-    scope ? "core",
-  }: let
-    module =
-      if name != null && name != ""
-      then name
-      else if mod != null && mod != ""
-      then mod
-      else null;
+  # ── 2. namespaced surface: lix.<libname> = lib.internal ───────────────────
 
-    description' =
-      if description != null
-      then description
-      else if module != null
-      then "Whether ${module} should be enabled ${
-        if scope == "core"
-        then "system-wide"
-        else if scope == "home"
-        then "for the user"
-        else throw "Expected scope to be one of [core home], got ${scope}"
-      }"
-      else "Whether to enable this module";
-  in {
-    false = mkEnableOption description';
-    true = mkEnableOption description' // {default = true;};
+  namespaced = {
+    lists = lists.internal;
+    debug = debug.internal;
+    predicates = predicates.internal;
+    strings = strings.internal;
+    attrsets = attrsets.internal;
+    options = options.internal;
+    modules = modules.internal;
+    system = system.internal;
   };
 
-  mkCfg = {
-    config,
-    path,
-  }:
-    attrByPath (toList path) {} config;
+  # ── 3. flat surface: collision-checked merge of all external aliases ───────
 
-  mkOpt = {
-    options,
-    path,
-  }:
-    setAttrByPath (toList path) options;
+  allLibs = [
+    {
+      name = "lists";
+      value = lists;
+    }
+    {
+      name = "debug";
+      value = debug;
+    }
+    {
+      name = "predicates";
+      value = predicates;
+    }
+    {
+      name = "strings";
+      value = strings;
+    }
+    {
+      name = "attrsets";
+      value = attrsets;
+    }
+    {
+      name = "options";
+      value = options;
+    }
+    {
+      name = "modules";
+      value = modules;
+    }
+    {
+      name = "system";
+      value = system;
+    }
+  ];
 
-  mkEnableMod = {
-    mod,
-    scope,
-  }:
-    mkEnable {inherit mod scope;};
-
-  mkModuleArgs = {
-    config,
-    top,
-    dom,
-    mod,
-    scope ? "core",
-  }: let
-    path = [top dom mod];
-  in {
-    cfg = mkCfg {inherit config path;};
-    opt = options: mkOpt {inherit options path;};
-    mkEnableMod = mkEnableMod {inherit mod scope;};
-  };
-
-  readDirAttrs = {
-    base,
-    ignore ? defaults.ignore,
-    predicate ? (name: type: type == "directory"),
-  }:
-    filterAttrs
-    (name: type: predicate name type && !(elem name ignore))
-    (readDir base);
-
-  importModule = {
-    args ? {},
-    base,
-    name,
-    path ? defaults.entrypoint,
-  }: let
-    module = import (base + "/${name}/${path}");
-  in
-    if isFunction module
-    then module args
-    else module;
-
-  asList = val: optionals (val != null) (toList val);
-
-  moduleEntries = {
-    base,
-    ignore ? defaults.ignore,
-    includeFiles ? false,
-  }:
-    mapAttrsToList
-    (name: type: let
-      isDirectory = type == "directory";
-      isFile = type == "regular";
-    in {
-      inherit isDirectory isFile name;
-      mod =
-        if isFile
-        then removeSuffix ".nix" name
-        else name;
-      path =
-        if isFile
-        then base + "/${name}"
-        else base + "/${name}/${defaults.entrypoint}";
-      spec = isDirectory;
-      raw = isFile;
-    })
-    (readDirAttrs {
-      inherit base ignore;
-      predicate = name: type:
-        (type == "directory" && pathIsRegularFile (base + "/${name}/${defaults.entrypoint}"))
-        || (
-          includeFiles
-          && type == "regular"
-          && hasSuffix ".nix" name
-          && name != defaults.entrypoint
-        );
-    });
-
-  collectModules = {
-    args,
-    extraArgs ? {},
-    base,
-    ignore ? defaults.ignore,
-    includeFiles ? false,
-    rawTag ? "core",
-    path ? defaults.entrypoint,
-    tags ? defaults.tags,
-  }: let
-    entries = moduleEntries {inherit base ignore includeFiles;};
-
-    specFor = entry:
-      if entry.raw
-      then {${rawTag} = entry.path;}
-      else
-        importModule {
-          inherit base path;
-          name = entry.name;
-          args =
-            args
-            // {
-              dom = baseNameOf (toString base);
-              mod = entry.mod;
-            }
-            // extraArgs;
-        };
-
-    specs = map specFor entries;
-  in
-    genAttrs tags (tag: concatMap (spec: asList (spec.${tag} or null)) specs);
-
-  importModules = args @ {
-    base,
-    ignore ? defaults.ignore,
-    includeFiles ? false,
-    rawTag ? "core",
-    path ? defaults.entrypoint,
-    tags ? defaults.tags,
-    extraArgs ? {},
-    ...
-  }: let
-    modules = collectModules {
-      inherit args base ignore includeFiles rawTag path tags extraArgs;
-    };
-  in {
-    imports = modules.core or [];
-    home-manager.sharedModules = modules.home or [];
-  };
-
-  findNix = base: name: stem:
-    findFirst pathIsRegularFile null [
-      (base + "/${name}/${stem}.nix")
-      (base + "/${name}/${stem}/${defaults.entrypoint}")
-    ];
-  # profileEntries = {
-  #   base,
-  #   ignore ? defaults.ignore,
-  # }:
-  #   readDirAttrs {inherit base ignore;};
-  # mkProfileConfig = base: user: let
-  #   default = base + "/${user}/${defaults.entrypoint}";
-  #   core = findNix base user "core";
-  #   home = findNix base user "home";
-  #   flat =
-  #     if core == null && home == null && pathIsRegularFile default
-  #     then default
-  #     else null;
-  # in {
-  #   inherit core;
-  #   home =
-  #     if home != null
-  #     then home
-  #     else flat;
-  # };
-  # importProfiles = {
-  #   base,
-  #   ignore ? defaults.ignore,
-  # }: let
-  #   users = profileEntries {inherit base ignore;};
-  # in {
-  #   imports =
-  #     filter
-  #     (module: module != null)
-  #     (mapAttrsToList (user: _: (mkProfileConfig base user).core) users);
-  #   home-manager.users = genAttrs (mapAttrsToList (user: _: user) users) (
-  #     user: let
-  #       cfg = mkProfileConfig base user;
-  #     in
-  #       if cfg.home != null
-  #       then import cfg.home
-  #       else {}
-  #   );
-  # };
-in {
-  inherit
-    asList
-    mkEnable
-    mkCfg
-    mkOpt
-    mkModuleArgs
-    moduleEntries
-    collectModules
-    importModules
-    # importProfiles
-    mkNix
-    mkNixConfigurations
-    ;
-}
+  externalAliases =
+    foldl'
+    (acc: entry: let
+      incoming = entry.value.external or {};
+      collisions = builtins.filter (k: builtins.hasAttr k acc) (builtins.attrNames incoming);
+    in
+      if collisions != []
+      then
+        throw ''
+          libraries: external alias collision(s) detected in '${entry.name}':
+            ${builtins.concatStringsSep ", " collisions}
+          Each name in external must be unique across all libs.
+        ''
+      else acc // incoming)
+    {}
+    allLibs;
+  # ── 4. final surface: flat aliases + namespaced (namespaced wins on clash) ─
+in
+  externalAliases // namespaced
