@@ -12,6 +12,7 @@
     name = "craole";
     description = "Craig 'Craole' Cole";
   };
+  api = {hosts.Preci = {dots = "/home/craole/.dots";};};
   top = "dots";
   dots = "/etc/nixos";
   ignore = [

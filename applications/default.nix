@@ -1,1 +1,10 @@
-{lix, ...} @ args: lix.importModules (args // {base = ./.;})
+{
+  lix,
+  pkgs,
+  ...
+} @ args:
+lix.importModules (args
+  // {
+    inherit pkgs;
+    base = ./.;
+  })

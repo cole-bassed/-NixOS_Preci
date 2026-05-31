@@ -30,11 +30,12 @@
         {inherit inputs alpha dots top;}
         // extraArgs;
     };
-  mkNixConfigurations = args: {
+
+  mkNixConfigurations = extraArgs: {
     nixosConfigurations =
       mapAttrs
-      (name: config: mkNix (config // args))
-      args.hosts or defaults.api.hosts;
+      (name: config: mkNix (config // {inherit extraArgs;}))
+      extraArgs.hosts or defaults.api.hosts;
   };
 
   mkEnable = {

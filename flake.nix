@@ -43,7 +43,7 @@
     inherit (nixpkgs) lib;
     lix = import ./libraries {
       inherit inputs lib;
-      defaults = import ./.;
+      defaults = import ./. {};
     };
   in
     lix.mkNixConfigurations {inherit lix;};
