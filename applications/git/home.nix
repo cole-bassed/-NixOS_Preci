@@ -6,7 +6,6 @@
 }: let
   inherit (lib.modules) mkDefault mkIf;
   inherit (lib.options) mkEnableOption mkOption;
-  inherit (lib.types) bool;
 
   dom = "applications";
   mod = "git";
@@ -16,59 +15,34 @@ in {
   options.${top}.${dom}.${mod} = {
     enable = mkEnableOption "Git profile";
 
-    delta.enable = mkOption {
-      type = bool;
-      default = true;
-      description = "Whether to enable Delta as the default Git diff viewer.";
-    };
+    delta.enable =
+      mkOption "Whether to enable Delta as the default Git diff viewer."
+      // {default = true;};
 
-    gitui.enable = mkOption {
-      type = bool;
-      default = true;
-      description = "Whether to install and enable GitUI.";
-    };
+    gitui.enable =
+      mkOption "Whether to install and enable GitUI."
+      // {default = true;};
   };
 
   config = mkIf cfg.enable {
     programs = {
       git = {
         enable = mkDefault true;
-
-        lfs = {
-          enable = mkDefault true;
-        };
+        lfs.enable = mkDefault true;
 
         settings = {
-          init = {
-            defaultBranch = mkDefault "main";
-          };
-
-          pull = {
-            rebase = mkDefault true;
-          };
-
-          rebase = {
-            autoStash = mkDefault true;
-          };
-
-          push = {
-            autoSetupRemote = mkDefault true;
-          };
-
-          core = {
-            editor = mkDefault "hx";
-          };
-
-          merge = {
-            conflictStyle = mkDefault "zdiff3";
-          };
+          init.defaultBranch = mkDefault "main";
+          pull.rebase = mkDefault true;
+          rebase.autoStash = mkDefault true;
+          push.autoSetupRemote = mkDefault true;
+          core.editor = mkDefault "hx";
+          merge.conflictStyle = mkDefault "zdiff3";
         };
       };
 
       delta = mkIf cfg.delta.enable {
         enable = mkDefault true;
         enableGitIntegration = mkDefault true;
-
         options = {
           navigate = mkDefault true;
           side-by-side = mkDefault true;

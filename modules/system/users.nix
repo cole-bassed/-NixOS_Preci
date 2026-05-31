@@ -19,12 +19,6 @@ in {
   home-manager = {
     backupFileExtension = "BaC";
     extraSpecialArgs = {inherit inputs top;};
-    # sharedModules = with inputs; [
-    #   niri.homeModules.niri
-    #   vicinae.homeManagerModules.default
-    #   noctalia.homeModules.default
-    #   nix-colors.homeManagerModules.default
-    # ];
     useGlobalPkgs = true;
     useUserPackages = true;
   };

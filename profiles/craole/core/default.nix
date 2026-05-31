@@ -1,9 +1,7 @@
 {top, ...}: {
   ${top} = {
-    applications = {
-      keyd = {
-        enable = true;
-      };
+    interface = {
+      keyd.enable = true;
     };
   };
 }

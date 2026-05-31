@@ -28,10 +28,7 @@
     };
     noctalia = {
       url = "github:noctalia-dev/noctalia-shell";
-      inputs = {
-        nixpkgs.follows = "nixpkgs";
-        quickshell.follows = "quickshell";
-      };
+      inputs.nixpkgs.follows = "nixpkgs";
     };
     zen-browser = {
       url = "github:0xc000022070/zen-browser-flake";
@@ -74,14 +71,7 @@
         inherit modules system;
         specialArgs =
           default.args
-          // {
-            inherit
-              inputs
-              alpha
-              dots
-              top
-              ;
-          }
+          // {inherit inputs alpha dots top;}
           // extraArgs;
       };
   in {

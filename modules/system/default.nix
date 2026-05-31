@@ -5,5 +5,6 @@
     ./fonts.nix
     ./maintenance.nix
     ./remote.nix
+    ./users.nix
   ];
 }

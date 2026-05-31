@@ -13,6 +13,7 @@ in {
       enable = true;
       package = pkgs.niri-unstable;
     };
+
     uwsm.waylandCompositors.niri = {
       prettyName = "Niri";
       comment = "Niri compositor managed by UWSM";
@@ -20,9 +21,7 @@ in {
     };
   };
 
-  environment = {
-    systemPackages = with pkgs; [
-      xwayland-satellite-unstable
-    ];
-  };
+  environment.systemPackages = with pkgs; [
+    xwayland-satellite-unstable
+  ];
 }

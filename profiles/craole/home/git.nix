@@ -1,3 +1,4 @@
+# TODO: This needs to lean more on applications.git
 {
   config,
   lib,
@@ -122,9 +123,11 @@
     '';
   };
 in {
-  home.packages = [
-    ghClone
-  ];
+  ${top}.applications = {
+    git.enable = true;
+  };
+
+  home.packages = [ghClone];
 
   programs = {
     git = {
