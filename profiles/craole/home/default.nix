@@ -6,7 +6,7 @@
   ${top} = {
     interface = {
       browser.enable = true;
-      keybind.enable = true;
+      control.enable = true;
     };
 
     applications = {

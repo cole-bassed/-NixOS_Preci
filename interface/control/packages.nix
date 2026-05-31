@@ -6,7 +6,7 @@
   ...
 }: let
   dom = "interface";
-  mod = "keybinds";
+  mod = "control";
   cfg = config.${top}.${dom}.${mod};
 
   inherit (lib.meta) getExe;
