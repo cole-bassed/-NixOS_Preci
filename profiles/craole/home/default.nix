@@ -1,17 +1,32 @@
 {
   osConfig,
   top,
+  config,
   ...
-}: {
+}: let
+  homeDir = config.home.homeDirectory;
+in {
   ${top} = {
     interface = {
-      browser.enable = true;
+      browsers.enable = true;
       control.enable = true;
     };
 
     applications = {
-      zen-browse.enable = true;
-      git.enable = true;
+      zen-browser.enable = true;
+
+      git = {
+        enable = true;
+        profiles = {
+          craole = "32288735+Craole@users.noreply.github.com";
+          craole-cc = "134658831+craole-cc@users.noreply.github.com";
+          cole-bassed = "75517056+cole-bassed@users.noreply.github.com";
+        };
+        defaultProfile = "craole-cc";
+        extraRepositories = {
+          "${homeDir}/.dots/" = "cole-bassed";
+        };
+      };
       noctalia.enable = true;
       starship.enable = true;
       vicinae.enable = true;

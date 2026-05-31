@@ -1,48 +1,44 @@
 {
-  config,
-  inputs,
-  lib,
-  pkgs,
+  lix,
   top,
+  lib,
+  inputs,
+  pkgs,
+  dom,
+  mod,
   ...
 }: let
-  dom = "applications";
-  mod = "noctalia";
-  cfg = config.${top}.${dom}.${mod};
-
   inherit (lib.modules) mkDefault mkForce mkIf;
-  inherit (lib.options) mkEnableOption mkOption;
+  inherit (lib.options) mkOption;
   inherit (lib.types) package str;
+  inherit (lix) mkModuleArgs;
 in {
-  imports = [inputs.noctalia.homeModules.default];
+  core = [];
 
-  options.${top}.${dom}.${mod} = {
-    enable = mkEnableOption "Noctalia common panel/bar layer";
+  home = {config, ...}: let
+    scope = "home";
+    inherit (mkModuleArgs {inherit config top dom mod scope;}) cfg opt mkEnable;
+  in {
+    imports = [inputs.noctalia.homeModules.default];
 
-    package = mkOption {
-      type = package;
-      default = pkgs.noctalia-shell;
-      description = "Noctalia shell package used for the common Wayland panel/bar layer.";
+    options = opt {
+      enable = mkEnable.false;
+      package = mkOption {
+        type = package;
+        default = pkgs.noctalia-shell;
+        description = "Noctalia shell package used for the common Wayland panel/bar layer.";
+      };
+      command = mkOption {
+        type = str;
+        default = "noctalia-shell";
+        description = "Command used by compositor-specific startup hooks.";
+      };
+      onHyprland = (mkEnable {name = "Noctalia on Hyprland";}).true;
+      onNiri = (mkEnable {name = "Noctalia on Niri";}).true;
     };
 
-    command = mkOption {
-      type = str;
-      default = "noctalia-shell";
-      description = "Command used by compositor-specific startup hooks.";
-    };
-
-    onHyprland =
-      mkEnableOption "Whether to start Noctalia from Hyprland exec-once."
-      // {default = true;};
-
-    onNiri =
-      mkEnableOption "Whether to start Noctalia from Niri spawn-at-startup."
-      // {default = true;};
-  };
-
-  config = mkIf cfg.enable {
-    programs = {
-      noctalia-shell = {
+    config = mkIf cfg.enable {
+      programs.noctalia-shell = {
         enable = mkDefault true;
         package = mkForce cfg.package;
         # The upstream module warns that systemd integration is deprecated, so
@@ -50,13 +46,8 @@ in {
         systemd.enable = mkDefault false;
       };
 
-      niri = {
-        settings.spawn-at-startup = mkIf cfg.onNiri [{argv = [cfg.command];}];
-      };
-    };
-
-    wayland.windowManager.hyprland = {
-      settings.exec-once = mkIf cfg.onHyprland [cfg.command];
+      programs.niri.settings.spawn-at-startup = mkIf cfg.onNiri [{argv = [cfg.command];}];
+      wayland.windowManager.hyprland.settings.exec-once = mkIf cfg.onHyprland [cfg.command];
     };
   };
 }

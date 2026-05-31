@@ -2,7 +2,7 @@
   imports = [
     ./protocols/wayland.nix
     ./browsers
-    ./keybinds
+    ./control
     ./keyd
     ./sessions/niri.nix
     ./sessions/hyprland.nix

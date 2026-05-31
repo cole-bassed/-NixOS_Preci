@@ -1,48 +1,65 @@
 {
-  config,
+  lix,
+  top,
   lib,
   pkgs,
-  top,
+  dom,
+  mod,
   ...
 }: let
   inherit (lib.modules) mkDefault mkIf;
-  inherit (lib.options) mkEnableOption mkOption;
-  inherit (lib.types) bool package;
-
-  dom = "applications";
-  mod = "vicinae";
-
-  cfg = config.${top}.${dom}.${mod};
+  inherit (lix) mkModuleArgs;
 in {
-  options.${top}.${dom}.${mod} = {
-    enable = mkEnableOption "Vicinae launcher profile";
+  core = [];
 
-    package = mkOption {
-      type = package;
-      default = pkgs.vicinae;
-      description = "Vicinae package to install for the desktop launcher application profile.";
+  home = {config, ...}: let
+    scope = "home";
+    inherit (mkModuleArgs {inherit config top dom mod scope;}) cfg opt mkEnable;
+
+    # Shared launch command used by both compositors
+    launch = "${cfg.package}/bin/vicinae";
+  in {
+    options = opt {
+      enable = mkEnable.false;
+
+      package = lib.mkOption {
+        type = lib.types.package;
+        default = pkgs.vicinae;
+        description = "Vicinae package to install for the desktop launcher application profile.";
+      };
+
+      fallbackPackage = lib.mkOption {
+        type = lib.types.package;
+        default = pkgs.fuzzel;
+        description = "Fallback launcher package used when Vicinae cannot open.";
+      };
+
+      systemd.enable = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Whether to start the Vicinae daemon through Home Manager's user service.";
+      };
+
+      onHyprland = (mkEnable {name = "Vicinae on Hyprland";}).true;
+      onNiri = (mkEnable {name = "Vicinae on Niri";}).true;
     };
 
-    fallbackPackage = mkOption {
-      type = package;
-      default = pkgs.fuzzel;
-      description = "Fallback launcher package used when Vicinae cannot open.";
-    };
+    config = mkIf cfg.enable {
+      programs.vicinae = {
+        enable = mkDefault true;
+        package = mkDefault cfg.package;
+        systemd.enable = mkDefault cfg.systemd.enable;
+      };
 
-    systemd.enable = mkOption {
-      type = bool;
-      default = true;
-      description = "Whether to start the Vicinae daemon through Home Manager's user service.";
-    };
-  };
+      home.packages = [cfg.fallbackPackage];
 
-  config = mkIf cfg.enable {
-    programs.vicinae = {
-      enable = mkDefault true;
-      package = mkDefault cfg.package;
-      systemd.enable = mkDefault cfg.systemd.enable;
-    };
+      wayland.windowManager.hyprland.settings.bind = mkIf cfg.onHyprland [
+        "SUPER, Z, exec, ${launch}"
+      ];
 
-    home.packages = [cfg.fallbackPackage];
+      programs.niri.settings.binds = mkIf cfg.onNiri {
+        "Mod+Z".action.spawn = [launch];
+      };
+    };
   };
 }

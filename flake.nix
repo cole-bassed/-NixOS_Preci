@@ -40,43 +40,11 @@
   };
 
   outputs = {nixpkgs, ...} @ inputs: let
-    inherit (nixpkgs.lib) nixosSystem;
-
-    default = {
-      modules = [
-        ./ai
-        ./applications
-        ./interface
-        ./modules
-        ./profiles
-        ./secrets
-      ];
-      system = "x86_64-linux";
-      user = {
-        name = "craole";
-        description = "Craig 'Craole' Cole";
-      };
-      top = "dots";
-      dots = "/etc/nixos";
-      args = {inherit inputs;};
+    inherit (nixpkgs) lib;
+    lix = import ./libraries {
+      inherit inputs lib;
+      defaults = import ./.;
     };
-
-    mkNix = {
-      alpha ? default.user,
-      dots ? default.dots,
-      extraArgs ? {},
-      modules ? default.modules,
-      system ? default.system,
-      top ? default.top,
-    }:
-      nixosSystem {
-        inherit modules system;
-        specialArgs =
-          default.args
-          // {inherit inputs alpha dots top;}
-          // extraArgs;
-      };
-  in {
-    nixosConfigurations.Preci = mkNix {dots = "/home/craole/.dots";};
-  };
+  in
+    lix.mkNixConfigurations {inherit lix;};
 }

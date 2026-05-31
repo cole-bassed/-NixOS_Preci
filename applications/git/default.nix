@@ -1,6 +1,5 @@
 {
   lix,
-  inputs,
   top,
   lib,
   pkgs,
@@ -18,7 +17,12 @@
     mkModuleArgs {inherit config top dom mod scope;};
 
   packages = {
-    firefoxpwa = pkgs.firefoxpwa;
+    ${mod} = pkgs.git;
+    delta = pkgs.delta;
+    gitui = pkgs.gitui;
+    lfs = pkgs.git-lfs;
+    gh = pkgs.gh;
+    jujutsu = pkgs.jujutsu;
   };
 
   subArgs = args // {inherit packages mkArgs;};
@@ -26,19 +30,15 @@
   collect = tag:
     concatMap (spec: asList (spec.${tag} or null))
     (map (f: import f subArgs) [
-      ./general.nix
-      ./bookmarks.nix
-      ./containers.nix
-      ./keyboard.nix
-      ./pins.nix
-      ./policies.nix
-      ./program.nix
-      ./search.nix
-      ./settings.nix
-      ./spaces.nix
-      ./style.nix
+      ./git.nix
+      ./lfs.nix
+      ./delta.nix
+      ./gitui.nix
+      ./gh.nix
+      ./jj.nix
+      ./profiles.nix
     ]);
 in {
-  core = [];
-  home = [inputs.zen-browser.homeModules.twilight] ++ collect "home";
+  core = collect "core";
+  home = collect "home";
 }
