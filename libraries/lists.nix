@@ -1,4 +1,15 @@
 {lib}: let
+  exports = {
+    internal = {
+      inherit nthOr asList;
+      atOr = nthOr;
+    };
+    external = {
+      valueInList = nthOr;
+      toList' = asList;
+    };
+  };
+
   inherit (lib.lists) elemAt isList length optionals toList;
   inherit (lib.attrsets) isAttrs;
 
@@ -27,13 +38,5 @@
           value = input;
           inherit position;
         };
-in {
-  internal = {
-    inherit nthOr asList;
-    atOr = nthOr;
-  };
-  external = {
-    valueInList = nthOr;
-    toList' = asList;
-  };
-}
+in
+  exports

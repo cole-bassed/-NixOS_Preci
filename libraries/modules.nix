@@ -41,7 +41,7 @@
 
   inherit (lib.attrsets) attrNames attrValues filterAttrs foldlAttrs genAttrs mapAttrs mapAttrsToList;
   inherit (lib.filesystem) baseNameOf readDir;
-  inherit (lib.lists) concatMap elem findFirst length;
+  inherit (lib.lists) any concatMap elem findFirst length;
   inherit (lib.trivial) pathExists;
   inherit (lists) asList;
   inherit (predicates) isAttrs isString;
@@ -55,7 +55,12 @@
     predicate ? (name: type: type == "directory"),
   }:
     filterAttrs
-    (name: type: predicate name type && !(elem name ignore))
+    (
+      name: type:
+        predicate name type
+        && !(elem name ignore)
+        && any (f: pathExists (base + "/${name}/${f}")) candidates
+    )
     (readDir base);
 
   # find the first candidate that exists under base/name/, fall back to entrypoint
