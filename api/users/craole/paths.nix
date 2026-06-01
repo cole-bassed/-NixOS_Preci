@@ -4,6 +4,8 @@
   ...
 }: let
   inherit (lib.attrsets) mapAttrs optionalAttrs;
+  inherit (lib.options) mkOption;
+  inherit (lib.types) attrs;
 in {
   core = {};
   home = {config, ...}: let
@@ -37,7 +39,13 @@ in {
         (mapAttrs (name: _: base + "/${name}") gitProfiles);
     };
   in {
-    ${top}.paths = {
+    options.${top}.paths = mkOption {
+      type = attrs;
+      default = {};
+      description = "Derived user filesystem paths exposed as session variables and cd aliases.";
+    };
+
+    config.${top}.paths = {
       inherit downloads pictures projects;
       inherit (pictures) avatars wallpapers;
     };

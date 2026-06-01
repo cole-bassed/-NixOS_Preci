@@ -27,7 +27,7 @@ in {
       "kvm-amd"
       # "kvm-intel"
     ];
-    kernelPackages = pkgs.linuxPackages_latest;
+    kernelPackages = mkDefault pkgs.linuxPackages_latest;
     kernelPatches = [
       {
         name = "Rust Support";
@@ -69,8 +69,8 @@ in {
   };
 
   networking = {
-    hostName = "Preci";
-    hostId = "9ebb411d";
+    hostName = mkDefault "Preci";
+    hostId = mkDefault "9ebb411d";
     networkmanager.enable = true;
   };
 

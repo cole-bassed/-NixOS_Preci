@@ -52,7 +52,8 @@
     ;
   inherit (lib.filesystem) baseNameOf readDir;
   inherit (lib.lists) any concatMap elem findFirst length;
-  inherit (lib.trivial) pathExists;
+  inherit (lib.strings) hasSuffix toUpper;
+  inherit (lib.trivial) isFunction pathExists;
   inherit (lists) asList;
   inherit (predicates) isAttrs isString;
 
@@ -72,7 +73,7 @@
         then
           type
           == "directory"
-          || (type == "regular" && lib.strings.hasSuffix ".nix" name && name != "default.nix")
+          || (type == "regular" && hasSuffix ".nix" name && name != "default.nix")
         else type == "directory";
     in
       (
@@ -117,7 +118,7 @@
       else base + "/${name}";
     imported = import resolved;
   in
-    if builtins.isFunction imported
+    if isFunction imported
     then imported args
     else imported;
 
@@ -129,12 +130,13 @@
     ignore ? defaults.ignore,
     tags ? defaults.tags,
     includeFiles ? false,
+    rawTag ? "core",
   }: let
     entries = readDirAttrs {inherit base ignore includeFiles;};
     specs =
       mapAttrsToList
-      (name: _:
-        importModule {
+      (name: type: let
+        module = importModule {
           inherit base name;
           args =
             args
@@ -143,7 +145,11 @@
               mod = name;
             }
             // extraArgs;
-        })
+        };
+      in
+        if type == "regular"
+        then {${rawTag} = module;}
+        else module)
       entries;
   in
     genAttrs tags (tag: concatMap (spec: asList (spec.${tag} or null)) specs);
@@ -189,14 +195,21 @@
     user,
   }:
     map
-    (fn: import fn {inherit args;})
+    (fn: import fn (args // {inherit user;}))
     (asList (user.imports or null));
 
   getUsers = declared: let
     # ── group constructor ────────────────────────────────────────────────────
     mkGroup = attrs: let
       names = attrNames attrs;
-      values = mapAttrs (name: user: user // {inherit name;}) attrs;
+      values = mapAttrs (name: user:
+        user
+        // {
+          inherit name;
+          home = user.home or "/home/${name}";
+          description = user.description or name;
+        })
+      attrs;
       count = length names;
     in {inherit names values count;};
 
@@ -345,7 +358,7 @@
   mkEnvVars = prefix: attrs:
     foldlAttrs (
       acc: name: value: let
-        key = lib.strings.toUpper "${prefix}${
+        key = toUpper "${prefix}${
           if prefix == ""
           then name
           else "_${name}"

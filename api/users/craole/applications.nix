@@ -9,17 +9,16 @@
     cole-bassed = "75517056+cole-bassed@users.noreply.github.com";
   };
 in {
-  core = {
-    ${top}.applications.git = {
-      enable = true;
-      inherit profiles;
-      defaultProfile = profiles.craole;
-    };
-  };
+  core = {};
   home = {
     ${top}.applications = {
+      git = {
+        enable = true;
+        inherit profiles;
+        defaultProfile = "craole";
+        extraRepositories = {"${user.home}/.dots/" = "cole-bassed";};
+      };
       zen-browser.enable = true;
-      git.extraRepositories = {"${user.home}/.dots/" = "cole-bassed";};
     };
     home.sessionVariables = {
       EDITOR = "hx";

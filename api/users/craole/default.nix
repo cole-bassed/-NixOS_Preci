@@ -36,7 +36,8 @@ in {
   ssh = "age1a2m7lypwqplsn8w8um9fzlrej84meee0zw9uljllqlayn46edpwq9mkfwg";
 
   imports = [
-    # ./git.nix  # example: split specs can be imported here
+    ./applications.nix
+    ./paths.nix
   ];
 
   interface = {

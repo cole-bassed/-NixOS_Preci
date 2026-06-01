@@ -6,13 +6,16 @@
   lix,
   ...
 }: let
-  inherit (lib.attrsets) attrValues mapAttrs;
+  inherit (lib.attrsets) attrValues filterAttrs mapAttrs;
   inherit (lib.lists) concatMap;
   inherit (lix.lists) asList;
   inherit (lix.modules) collectUserSpecs getUsers mkCdAliases mkEnvVars;
 
-  hostUsers = getUsers host.users;
-  normalUsers = hostUsers.byRole.normal.values;
+  hostUsers =
+    if host.users ? values
+    then host.users
+    else getUsers host.users;
+  loginUsers = filterAttrs (_: user: (user.role or "") != "service") hostUsers.values;
   adminUsers = hostUsers.byRole.administrator.values;
 in {
   imports =
@@ -22,15 +25,16 @@ in {
       concatMap (spec: asList (spec.core or null))
       (collectUserSpecs {
         inherit user;
-        args = {inherit top host inputs lix;};
+        args = {inherit lib top host inputs lix;};
       }))
-    (attrValues normalUsers);
+    (attrValues loginUsers);
 
   users.users =
     mapAttrs (_: user: {
       inherit (user) description;
+      group = user.group or user.name;
       isNormalUser = (user.role or "") != "service";
-      autoLogin = user.autoLogin or false;
+      isSystemUser = (user.role or "") == "service";
       extraGroups =
         if user.role == "administrator"
         then ["networkmanager" "wheel"]
@@ -39,6 +43,8 @@ in {
         else [];
     })
     hostUsers.values;
+
+  users.groups = mapAttrs (_: user: {}) hostUsers.values;
 
   security.sudo = {
     execWheelOnly = true;
@@ -82,9 +88,9 @@ in {
           (spec: asList (spec.home or null))
           (collectUserSpecs {
             inherit user;
-            args = {inherit top host inputs lix;};
+            args = {inherit lib top host inputs lix;};
           });
       })
-      normalUsers;
+      loginUsers;
   };
 }
