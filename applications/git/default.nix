@@ -1,5 +1,4 @@
 {
-  lix,
   top,
   lib,
   pkgs,
@@ -7,9 +6,8 @@
   mod,
   ...
 } @ args: let
-  inherit (lib.lists) concatMap;
-  inherit (lix.lists) asList;
-  inherit (lix.options) mkModuleArgs;
+  inherit (lib.lists) concatMap asList;
+  inherit (lib.options) mkModuleArgs;
 
   mkArgs = {
     config,
@@ -17,13 +15,8 @@
   }:
     mkModuleArgs {inherit config top dom mod scope;};
 
-  packages = {
-    ${mod} = pkgs.git;
-    delta = pkgs.delta;
-    gitui = pkgs.gitui;
-    lfs = pkgs.git-lfs;
-    gh = pkgs.gh;
-    jujutsu = pkgs.jujutsu;
+  packages = with pkgs; {
+    inherit git delta gitui git-lfs gh jujutsu;
   };
 
   subArgs = args // {inherit packages mkArgs;};

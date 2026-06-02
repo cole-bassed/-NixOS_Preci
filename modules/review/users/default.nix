@@ -3,13 +3,11 @@
   host,
   top,
   lib,
-  lix,
   ...
 }: let
   inherit (lib.attrsets) attrValues filterAttrs mapAttrs;
-  inherit (lib.lists) concatMap;
-  inherit (lix.lists) asList;
-  inherit (lix.modules) collectUserSpecs getUsers mkCdAliases mkEnvVars;
+  inherit (lib.lists) asList concatMap;
+  inherit (lib.modules) collectUserSpecs getUsers mkCdAliases mkEnvVars;
 
   hostUsers =
     if host.users ? values
@@ -25,7 +23,7 @@ in {
       concatMap (spec: asList (spec.core or null))
       (collectUserSpecs {
         inherit user;
-        args = {inherit lib top host inputs lix;};
+        args = {inherit lib top host inputs;};
       }))
     (attrValues loginUsers);
 
@@ -63,7 +61,7 @@ in {
 
   home-manager = {
     backupFileExtension = "BaC";
-    extraSpecialArgs = {inherit inputs lix top host;};
+    # extraSpecialArgs = {inherit inputs  top host;};
     useGlobalPkgs = true;
     useUserPackages = true;
     users =
@@ -88,7 +86,7 @@ in {
           (spec: asList (spec.home or null))
           (collectUserSpecs {
             inherit user;
-            args = {inherit lib top host inputs lix;};
+            args = {inherit lib top host inputs;};
           });
       })
       loginUsers;

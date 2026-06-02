@@ -1,74 +1,102 @@
 {
   api,
+  debug,
   attrsets,
   defaults,
+  lists,
   modules,
-  names,
-  paths,
-  strings,
+  types,
   ...
 }: let
   exports = {
-    scoped = {inherit mkConfigurations;};
-    global = {inherit mkConfigurations;};
+    scoped = {inherit build resolve systemBuilder systemType;};
+    global = {
+      resolveFlakeConfig = resolve;
+      mkConfigurations = build;
+    };
   };
 
-  inherit (attrsets) mapAttrs recursiveUpdate;
-  inherit (modules) nixosSystem darwinSystem;
-  inherit (strings) hasPrefix;
   inherit (api) hosts;
+  inherit (attrsets) mapAttrs optionalAttrs recursiveUpdate;
+  inherit (debug) withContext;
+  inherit (lists) elem;
+  inherit (modules) nixosSystem darwinSystem;
+  inherit (types) isString typeOf isAttrs isNull;
 
-  mkConfigurations = {
-    args ? {inherit defaults paths names;},
+  build = {
+    args ? null,
     class ? "nixos",
-  } @ params: let
-    # TODO: Validate clas is one of ["nixos" "darwin"]
-    args = recursiveUpdate params (params.extraArgs or {});
-    # hosts = args.api.hosts or (import paths.api {inherit defaults;});
-    type =
+  }:
+    assert withContext {
+      name = "config.build";
+      assertion = isString class;
+      message = "class must be a string, got ${typeOf class}";
+      context = "validating class type in build";
+    };
+    assert withContext {
+      name = "config.build";
+      assertion = isNull args || isAttrs args;
+      message = "args must be an attribute set or null, got ${typeOf args}";
+      context = "validating args type in build";
+    }; let
+      type = systemType class;
+      builder = systemBuilder class;
+      hosts = resolve args;
+    in {${type} = mapAttrs (_: host: builder host) hosts;};
+
+  systemBuilder = class:
+    assert withContext {
+      name = "config.systemBuilder";
+      assertion = elem class ["nixos" "darwin"];
+      message = ''expected one of ["nixos" "darwin"], got ${class}'';
+      context = "parsing builder type from class";
+    };
       if class == "nixos"
-      then "nixosConfigurations"
-      else if class == "darwin"
-      then "darwinConfigurations"
-      else (throw ''mkConfigurations.class: Expected one of ["nixos" "darwin"], got ${class}'');
-    builder =
-      if hasPrefix "nixos" class
       then nixosSystem
-      else if hasPrefix "darwin"
-      then darwinSystem
-      else throw "mkConfigurations.builder: Unknown type";
-  in {
-    ${type} = mapAttrs (_: api: let
-      host = recursiveUpdate defaults.host api;
+      else darwinSystem;
+
+  systemType = class:
+    assert withContext {
+      name = "config.systemType";
+      assertion = elem class ["nixos" "darwin"];
+      message = ''expected one of ["nixos" "darwin"], got ${class}'';
+      context = "parsing type of config from class for config.mkConfigurations";
+    };
+      if class == "darwin"
+      then "darwinConfigurations"
+      else "nixosConfigurations";
+
+  resolve = value: let
+    args =
+      recursiveUpdate
+      defaults
+      (optionalAttrs (isAttrs value) value);
+  in
+    mapAttrs (_: spec: let
+      host = recursiveUpdate defaults.host spec;
+      lib = args.lib or (args.libraries or {});
+
       flake =
-        recursiveUpdate
-        (
-          recursiveUpdate
-          (defaults.flake or {})
-          {inputs = args.inputs or (args.extraArgs.inputs or {});}
-        ) (
-          recursiveUpdate
-          (host.flake or {})
-          {home = host.path or (host.home or (host.dots or null));}
-        );
-    in
-      builder {
-        inherit (host) system;
-        modules =
-          (args.modules or [])
-          ++ (args.extraArgs.modules or [])
-          ++ (host.modules or [])
-          ++ (host.imports or []);
-        specialArgs =
-          {
-            inherit host flake;
-            inherit (flake) inputs top;
-            ${names.lib} = args.${names.lib};
-            inherit (args) lix; # TODO: How can this not be hardcoded, i want to inherit args.${names.lib}
-          }
-          // args;
-      })
+        recursiveUpdate (defaults.flake or {}) (host.flake or {})
+        // {
+          inputs = args.inputs or (args.extraArgs.inputs or {});
+          home = host.path or (host.home or (host.dots or null));
+        };
+    in {
+      inherit (host) system;
+      modules =
+        (args.modules or [])
+        ++ (args.extraArgs.modules or [])
+        ++ (host.modules or [])
+        ++ (host.imports or []);
+      specialArgs =
+        {
+          inherit host flake lib;
+          inherit (flake) inputs top;
+          "${args.names.lib}" = lib;
+        }
+        // removeAttrs args ["modules"];
+    })
     hosts;
-  };
 in
   exports

@@ -1,14 +1,12 @@
 {
   lib,
   defaults,
-  names,
-  paths,
 }: let
   inherit (lib.attrsets) recursiveUpdate optionalAttrs mapAttrs;
   inherit (lib.lists) elem;
   mkLix = includes:
     recursiveUpdate legacy (
-      {inherit defaults names paths;}
+      {inherit defaults;}
       // optionalAttrs (elem "api" includes) {inherit (scoped) api;}
       // optionalAttrs (elem "attrsets" includes) {inherit (scoped) attrsets;}
       // optionalAttrs (elem "config" includes) {inherit (scoped) config;}
@@ -20,10 +18,11 @@
       // optionalAttrs (elem "strings" includes) {inherit (scoped) strings;}
       // optionalAttrs (elem "types" includes) {inherit (scoped) types;}
     );
+  name = defaults.names.lib;
 
   legacy = import ./nixpkgs.nix {inherit lib;};
   custom = {
-    api = import paths.api (mkLix [
+    api = import defaults.paths.api (mkLix [
       "attrsets"
       "modules"
       "lists"
@@ -76,29 +75,15 @@
 
   scoped =
     mapAttrs
-    (_: value: value.scoped // value.global)
+    (_: value: (value.scoped or {}) // (value.global or {}))
     custom;
 
   global = scoped.attrsets.mergeUnique {
     items = custom;
-    getAttrs = name: custom.${name}.global or {};
+    getAttrs = library: custom.${library}.global or (custom.${library} or {});
     what = "libraries";
-    owner = name: "${names.lib}.${name}.global";
+    owner = library: "${name}.${library}.global";
   };
-  # name = names.lib;
-  # api = import paths.api {inherit ${name}; inherit defaults};
-  # mkLix = includes: {
-  #   ${name} = recursiveUpdate legacy (
-  #     {inherit defaults names paths;}
-  #     // optionalAttrs (elem "attrsets" includes) {inherit (scoped) attrsets;}
-  #     // optionalAttrs (elem "debug" includes) {inherit (scoped) debug;}
-  #     // optionalAttrs (elem "modules" includes) {inherit (scoped) modules;}
-  #     // optionalAttrs (elem "options" includes) {inherit (scoped) options;}
-  #     // optionalAttrs (elem "strings" includes) {inherit (scoped) strings;}
-  #     // optionalAttrs (elem "types" includes) {inherit (scoped) types;}
-  #     // optionalAttrs (elem "lists" includes) {inherit (scoped) lists;}
-  #   );
-  # };
 in
   recursiveUpdate legacy (
     {}

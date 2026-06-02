@@ -1,16 +1,14 @@
 {
-  lix,
+  lib,
   inputs,
   top,
-  lib,
   pkgs,
   dom,
   mod,
   ...
 } @ args: let
-  inherit (lib.lists) concatMap;
-  inherit (lix) mkModuleArgs;
-  inherit (lix.lists) asList;
+  inherit (lib.lists) asList concatMap;
+  inherit (lib.options) mkModuleArgs;
 
   mkArgs = {
     config,

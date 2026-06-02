@@ -1,11 +1,13 @@
 {
+  attrsets,
+  options,
+  types,
   top,
-  lib,
   ...
 }: let
-  inherit (lib.attrsets) mapAttrs optionalAttrs;
-  inherit (lib.options) mkOption;
-  inherit (lib.types) attrs;
+  inherit (attrsets) mapAttrs optionalAttrs;
+  inherit (options) mkOption;
+  inherit (types) attrs;
 in {
   core = {};
   home = {config, ...}: let

@@ -16,15 +16,19 @@
         mkFloatOption
         mkLatitudeOption
         mkLongitudeOption
+        mkGeoProviderOption
+        mkTimezoneOption
+        mkLocalTimeOption
+        mkLocaleOption
         ;
     };
     global = {inherit mkModuleArgs;};
   };
 
-  inherit (attrsets) attrByPath setAttrByPath;
+  inherit (attrsets) attrByPath setAttrByPath optionalAttrs;
   inherit (lists) asList;
   inherit (options) mkOption mkEnableOption;
-  inherit (types) isFloat addCheck float;
+  inherit (types) nullOr addCheck float str;
 
   mkEnable = {
     name ? null,
@@ -89,15 +93,13 @@
   };
 
   mkFloatOption = {
-    name,
     description,
     min ? null,
     max ? null,
     default ? null,
   }: let
     check = value:
-      isFloat value
-      && (
+      (
         if min != null
         then value >= min
         else true
@@ -108,33 +110,99 @@
         else true
       );
   in
-    mkOption {
-      type = addCheck float check;
-      inherit description;
-      ${
-        if default != null
-        then "default"
-        else null
-      } =
-        default;
-    };
+    mkOption ({
+        type = nullOr (addCheck float check);
+        inherit description;
+      }
+      // optionalAttrs (default != null) {inherit default;});
 
-  mkLatitudeOption = {default ? null}:
+  mkLatitudeOption = {
+    host,
+    default ? null,
+  }:
     mkFloatOption {
-      name = "latitude";
       description = "Latitude coordinate, between -90.0 and 90.0";
       min = -90.0;
       max = 90.0;
-      inherit default;
+      default = host.localization.latitude or default;
     };
 
-  mkLongitudeOption = {default ? null}:
+  mkLongitudeOption = {
+    host,
+    default ? null,
+  }:
     mkFloatOption {
-      name = "longitude";
       description = "Longitude coordinate, between -180.0 and 180.0";
       min = -180.0;
       max = 180.0;
-      inherit default;
+      default = host.localization.longitude or default;
+    };
+
+  mkGeoProviderOption = {
+    host,
+    default ? "manual",
+  }: let
+    loc = host.localization or {};
+    provider = loc.provider or null;
+    latitude = loc.latitude or null;
+    longitude = loc.longitude or null;
+  in
+    mkOption {
+      type = types.enum ["manual" "geoclue2"];
+      description = "Location provider. If 'manual', valid latitude and longitude must be provided.";
+      default =
+        if provider != null
+        then provider
+        else if latitude != null && longitude != null
+        then default
+        else "geoclue2";
+    };
+
+  mkTimezoneOption = {
+    host,
+    default ? null,
+  }:
+    mkOption ({
+        type = nullOr str;
+        description = "The system or user timezone.";
+      }
+      // optionalAttrs (host.localization.timezone or default != null) {
+        default = host.localization.timezone or default;
+      });
+
+  mkLocalTimeOption = {host}: let
+    # Reaching into your newly designed list utility from the previous migration step
+    useLocalTime = lists.scoped.hasAny ["dual-boot" "dualboot-windows"] (host.functionalities or []);
+  in
+    mkEnableOption ''
+      Keeps the hardware clock in local time instead of UTC.
+      This is particularly important when the system dual-boots with Windows,
+      as Windows defaults to local time for the RTC.
+    ''
+    // {default = useLocalTime;};
+
+  mkLocaleOption = {
+    host,
+    default ? "en_US.UTF-8",
+  }:
+    mkOption {
+      type = str;
+      description = ''
+        Configures the default locale settings. This determines:
+        - Language for program messages and UI text.
+        - Date, time, numeric, and monetary formatting conventions.
+        - Character sorting and collation order.
+
+        Applies to all applications that respect locale environment variables.
+      '';
+      default = host.localization.locale or default;
     };
 in
   exports
+# loc = host.localization or {};
+# latitude = loc.latitude or null;
+# longitude = loc.longitude or null;
+# provider = loc.provider or null;
+# timezone = loc.timezone or null;
+# useLocalTime = hasAny ["dual-boot" "dualboot-windows"] (host.functionalities or []);
+# locale = loc.locale or "en_US.UTF-8";

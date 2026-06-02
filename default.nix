@@ -1,10 +1,13 @@
 {
   lib ? null,
   inputs ? null,
-  names ? {
+  ...
+}: let
+  names = {
     lib = "lix";
-  },
-  paths ? {
+  };
+
+  paths = {
     src = ./.;
     ai = ./ai;
     api = ./api;
@@ -14,8 +17,9 @@
     interface = ./interface;
     lib = ./libraries;
     mods = ./modules;
-  },
-  defaults ? {
+  };
+
+  defaults = {
     host = rec {
       name = null;
       id = null;
@@ -51,21 +55,19 @@
       "temp"
     ];
     tags = ["core" "home"];
-  },
-  libraries ? (import ./libraries {
+  };
+
+  modules = with paths; [
+    mods
+  ];
+
+  libraries = import ./libraries {
     lib =
       if lib != null
       then lib
       else if inputs ? nixpkgs.lib
       then inputs.nixpkgs.lib
       else (import <nixpkgs/lib>);
-    inherit defaults names paths;
-  }),
-  modules ? (with paths; [
-    mods
-  ]),
-  ...
-}: {
-  inherit defaults libraries modules;
-  "${names.lib}" = libraries;
-}
+    defaults = defaults // {inherit names paths modules;};
+  };
+in {inherit defaults libraries modules names paths;}

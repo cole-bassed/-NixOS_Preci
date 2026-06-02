@@ -8,7 +8,7 @@
   ...
 }: let
   inherit (lib.modules) mkIf;
-  inherit (lix) mkModuleArgs;
+  inherit (lid.options) mkModuleArgs;
 
   mk = scope: {config, ...}: let
     _ = mkModuleArgs {inherit config top dom mod scope;};

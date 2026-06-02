@@ -178,11 +178,11 @@
 
   getOrderedOr = {
     key,
-    attrs,
+    set,
     default ? null,
   }:
-    if hasAttr key attrs
-    then getAttr key attrs
+    if hasAttr key set
+    then getAttr key set
     else default;
 
   toOrdered = {value}: let
@@ -200,40 +200,53 @@
       }) (genList (x: x) count)
     );
 
-  mapOrdered = {attrs}:
-    mapAttrs (_: value: toOrdered {inherit value;}) attrs;
+  mapOrdered = set:
+    mapAttrs (_: value: toOrdered {inherit value;}) set;
 
-  parseOrdered = {value}: let
-    ordered = toOrdered {inherit value;};
+  parseOrdered = value: let
+    ordered =
+      if isAttrs value
+      then value
+      else toOrdered {inherit value;};
 
     primary = getOrderedOr {
       key = "1";
-      attrs = ordered;
+      set = ordered;
     };
     secondary = getOrderedOr {
       key = "2";
-      attrs = ordered;
+      set = ordered;
     };
     tertiary = getOrderedOr {
       key = "3";
-      attrs = ordered;
+      set = ordered;
     };
 
     preferred = primary;
     fallback = secondary;
+
     default =
       if isList value
       then
-        nthOr {
-          position = (length value) - 1;
-          inherit value;
+        if value == []
+        then null
+        else
+          nthOr {
+            position = (length value) - 1;
+            inherit value;
+          }
+      else if isAttrs value
+      then
+        getOrderedOr {
+          key = "default";
+          set = value;
+          default = primary;
         }
       else value;
   in
     ordered
     // {inherit primary secondary tertiary preferred fallback default;};
 
-  mapParsedOrdered = {attrs}:
-    mapAttrs (_: value: parseOrdered {inherit value;}) attrs;
+  mapParsedOrdered = set: mapAttrs (_: value: parseOrdered value) set;
 in
   exports

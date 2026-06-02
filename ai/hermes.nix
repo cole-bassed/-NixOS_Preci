@@ -3,16 +3,14 @@
   dots,
   inputs,
   lib,
-  lix,
   pkgs,
   top,
   ...
 }: let
   inherit (inputs) hermes-agent;
   inherit (lib.modules) mkDefault mkIf;
-  inherit (lib.options) mkOption;
+  inherit (lib.options) mkModuleArgs mkOption;
   inherit (lib.types) attrs bool int listOf package str;
-  inherit (lix) mkModuleArgs;
 
   dom = "ai";
   mod = "hermes";

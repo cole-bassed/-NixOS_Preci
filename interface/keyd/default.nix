@@ -9,7 +9,7 @@
   inherit (lib.modules) mkDefault mkIf;
   inherit (lib.options) mkOption;
   inherit (lib.types) listOf str;
-  inherit (lix) mkModuleArgs;
+  inherit (lid.options) mkModuleArgs;
 in {
   core = {config, ...}: let
     inherit (mkModuleArgs {inherit config top dom mod;}) cfg opt mkEnableMod;

@@ -41,7 +41,7 @@
 
   outputs = {...} @ inputs: let
     args = import ./. {inherit inputs;};
-    inherit (args.lix.modules) mkConfigurations;
+    inherit (args.libraries.config) mkConfigurations;
   in
     mkConfigurations {class = "nixos";};
 }

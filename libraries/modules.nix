@@ -8,6 +8,24 @@
   ...
 }: let
   exports = {
+    # scoped = {
+    #   inherit
+    #     readDirAttrs
+    #     resolveEntrypoint
+    #     importModule
+    #     collectSpecs
+    #     collectNamedSpecs
+    #     collectUserSpecs
+    #     getUsers
+    #     mkEnvVars
+    #     mkHomeUser
+    #     importAll
+    #     mkHomeUsers
+    #     importModules
+    #     importProfiles
+    #     mkCdAliases
+    #     ;
+    # };
     global = {
       inherit
         readDirAttrs
@@ -25,8 +43,6 @@
         importProfiles
         mkCdAliases
         ;
-    };
-    global = {
     };
   };
 

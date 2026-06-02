@@ -1,11 +1,7 @@
 # api/users/craole/default.nix
 # Pure user spec — no role, no primary, no autoLogin (those are host concerns).
-{
-  lib,
-  lix,
-  ...
-}: let
-  inherit (lix.attrsets) mapOrderedAttrs;
+{attrsets, ...}: let
+  inherit (attrsets) mapOrderedAttrs;
 
   applications = mapOrderedAttrs {
     browsers = ["zen-twilight" "chromium"];
@@ -18,6 +14,11 @@
     prompt = "starship";
   };
 in {
+  imports = [
+    ./applications
+    ./paths
+  ];
+
   inherit applications;
 
   # host-agnostic user metadata
@@ -34,11 +35,6 @@ in {
   ];
 
   ssh = "age1a2m7lypwqplsn8w8um9fzlrej84meee0zw9uljllqlayn46edpwq9mkfwg";
-
-  imports = [
-    ./applications.nix
-    ./paths.nix
-  ];
 
   interface = {
     keyboard = {

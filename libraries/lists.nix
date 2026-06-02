@@ -9,9 +9,11 @@
     scoped = {
       inherit asList nthOr orNull orDefault orEmpty;
 
+      atOr = nthOr;
+      has = has';
+      hasAny = hasAny';
       isEmpty = isEmpty';
       isNotEmpty = isNotEmpty';
-      atOr = nthOr;
     };
     global = {
       isEmptyList = isEmpty';
@@ -20,16 +22,42 @@
       orNullList = orNull;
       toList' = asList;
       valueInList = nthOr;
+
+      # Added to global exports
+      inList = has';
+      anyInList = hasAny';
     };
   };
 
   inherit (attrsets) isAttrs;
   inherit (debug) assertWithContext;
-  inherit (lists) elemAt isList length optionals toList;
+  inherit (lists) elemAt isList length optionals toList any elem; # Inherited 'any' and 'elem'
   inherit (types) typeOf isEmpty;
 
   isEmpty' = value: value == [];
   isNotEmpty' = value: !isEmpty' value;
+
+  # --- Membership Checks ---
+
+  has' = item: list:
+    assert assertWithContext {
+      name = "lists.has";
+      assertion = isList list;
+      message = "expected a list to search within, got ${typeOf list}";
+      context = "evaluating lists.has";
+    };
+      elem item list;
+
+  hasAny' = candidates: list:
+    assert assertWithContext {
+      name = "lists.hasAny";
+      assertion = isList list;
+      message = "expected a target list to search within, got ${typeOf list}";
+      context = "evaluating lists.hasAny";
+    };
+      any (candidate: elem candidate list) (asList candidates);
+
+  # --- Existing Methods ---
 
   orNull = value:
     assert assertWithContext {

@@ -10,7 +10,7 @@
     global = {inherit hosts users;};
   };
 
-  inherit (attrsets) attrNames filterAttrs genAttrs mapAttrs;
+  inherit (attrsets) attrNames mapAttrs;
   inherit (lists) elemAt filter length;
   # inherit (modules) getUsers;
   inherit (modules) collectNamedSpecs getUsers;
@@ -20,6 +20,7 @@
     collectNamedSpecs {
       inherit excludes;
       args = {
+        inherit attrsets;
         # inherit lix;
         # inherit (lix) defaults lib;
       };

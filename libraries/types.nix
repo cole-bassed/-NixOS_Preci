@@ -7,13 +7,13 @@
 }: let
   exports = {
     scoped = {};
-    global = {inherit isEmpty isNotEmpty isNull isValidGeoCoords;};
+    global = {inherit isEmpty isNotEmpty isNull isNotNull;};
   };
 
   inherit (debug) withContext;
   inherit (lists) head tail isList optionals reverseList;
   inherit (strings) concatStrings stringLength stringToCharacters;
-  inherit (types) isAttrs isFloat isFunction isString;
+  inherit (types) isAttrs isFunction isString;
 
   # Minimal local trim so predicates doesn't circularly depend on strings.
   trim = s: let
@@ -30,6 +30,7 @@
     concatStrings trimmed;
 
   isNull = value: value == null;
+  isNotNull = value: value != null;
 
   /**
   Check if a value is considered "empty" for defaulting purposes.
@@ -97,12 +98,5 @@
   ```
   */
   isNotEmpty = value: !isEmpty value;
-
-  isValidGeoCoords = {
-    longitude,
-    latitude,
-  }:
-    (isFloat longitude && (longitude >= -180.0) && (longitude <= 180.0))
-    && (isFloat latitude && (latitude >= -180.0) && (latitude <= 180.0));
 in
   exports
