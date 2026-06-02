@@ -52,22 +52,19 @@
   outputs = {self, ...} @ inputs:
     import ./assembly (
       import ./. {
+        inherit inputs;
         packages = with inputs; {
           nixpkgs = nixpkgs.legacyPackages;
         };
         modules = {
-          core = with inputs;
-            [
-              hermes-agent.nixosModules.default
-              home-manager.nixosModules.home-manager
-              niri.nixosModules.niri
-              noctalia.nixosModules.default
-              sops.nixosModules.default
-              stylix.nixosModules.stylix
-            ]
-            ++ [
-              # ./base
-            ];
+          core = with inputs; [
+            hermes-agent.nixosModules.default
+            home-manager.nixosModules.home-manager
+            niri.nixosModules.niri
+            noctalia.nixosModules.default
+            sops.nixosModules.default
+            stylix.nixosModules.stylix
+          ];
 
           home = with inputs; [
             niri.homeModules.config

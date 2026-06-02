@@ -260,7 +260,7 @@
       ...
     }:
       mkHomeUser {inherit user config osConfig top;})
-    ((getUsers host).normal.raw);
+    (getUsers host).normal.raw;
 
   mkHomeUser = {
     user,

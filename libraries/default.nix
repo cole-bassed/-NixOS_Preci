@@ -1,11 +1,11 @@
 {
+  defaults,
   info,
+  inputs,
   libraries,
   modules,
   packages,
   paths,
-  inputs,
-  defaults,
 }: let
   name = info.names.lib;
   flake =

@@ -53,7 +53,7 @@
       type = systemType class;
       builder = systemBuilder class;
       hosts = resolve flake;
-    in {${type} = mapAttrs (_: host: builder host) hosts;};
+    in {${type} = mapAttrs (_: builder) hosts;};
 
   systemBuilder = class:
     assert withContext {

@@ -55,23 +55,17 @@
     ];
     tags = ["core" "home"];
   };
-
-  exports = {
-    mods = with paths; [
-      base
-    ];
-    modules =
-      modules
-      // {core = (modules.core or []) ++ exports.mods;};
-
-    defaults =
+in {
+  inherit inputs packages modules defaults;
+  libraries = import ./libraries {
+    inherit
       defaults
-      // {inherit info paths modules libraries;};
-
-    libraries = import ./libraries {
-      inherit info inputs paths libraries packages;
-      inherit (exports) defaults modules;
-    };
+      info
+      inputs
+      libraries
+      modules
+      packages
+      paths
+      ;
   };
-in
-  exports
+}

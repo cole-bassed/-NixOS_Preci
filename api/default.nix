@@ -100,6 +100,6 @@
     (_: host: host // {users = resolveUsers host;})
     specs.hosts;
 
-  users = specs.users;
+  inherit (specs) users;
 in
   exports

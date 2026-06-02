@@ -252,6 +252,6 @@
     ordered
     // {inherit primary secondary tertiary preferred fallback default;};
 
-  mapParsedOrdered = set: mapAttrs (_: value: parseOrdered value) set;
+  mapParsedOrdered = set: mapAttrs (_: parseOrdered) set;
 in
   exports
