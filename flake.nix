@@ -52,14 +52,18 @@
 
   outputs = {self, ...} @ inputs: let
     modules = {
-      core = with inputs; [
-        hermes-agent.nixosModules.default
-        home-manager.nixosModules.home-manager
-        niri.nixosModules.niri
-        noctalia.nixosModules.default
-        sops.nixosModules.default
-        stylix.nixosModules.stylix
-      ];
+      core = with inputs;
+        [
+          hermes-agent.nixosModules.default
+          home-manager.nixosModules.home-manager
+          niri.nixosModules.niri
+          noctalia.nixosModules.default
+          sops.nixosModules.default
+          stylix.nixosModules.stylix
+        ]
+        ++ [
+          ./base
+        ];
 
       home = with inputs; [
         niri.homeModules.config
@@ -75,7 +79,8 @@
     libraries = with inputs; {
       nixpkgs = nixpkgs.lib;
       home-manager = home-manager.lib;
-      treefmt-nix = treefmt.lib;
+      treefmt = treefmt.lib;
+      darwin = nix-darwin.lib or {};
     };
     args = import ./. {inherit inputs modules libraries;};
     inherit (args.libraries.config) mkConfigurations;

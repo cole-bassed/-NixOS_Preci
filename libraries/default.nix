@@ -37,16 +37,22 @@
       "lists"
       "types"
     ]);
-    config =
-      import ./config.nix (mkLix [
+    config = import ./config.nix (mkLix [
         "api"
         "debug"
-        "module"
+        "modules"
         "filesystem"
         "lists"
         "types"
-      ])
-      // {inherit (modules) core home;};
+      ]
+      // {
+        fromFlake =
+          {
+            inherit modules inputs paths;
+            libraries = legacy;
+          }
+          // info;
+      });
     debug = import ./debug.nix (mkLix [
       "lists"
       "types"

@@ -368,7 +368,7 @@
 // {
   types = {
     inherit (lib.filesystem) isPath;
-    inherit (lib.attsets) isAttrs isDerivation;
+    inherit (lib.attrsets) isAttrs isDerivation;
     inherit (lib.trivial) isBool isFloat isFunction;
     inherit
       (lib.strings)

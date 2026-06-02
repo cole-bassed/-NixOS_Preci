@@ -1,14 +1,12 @@
 {
   api,
-  core,
-  home,
   debug,
   attrsets,
   defaults,
   lists,
   modules,
   types,
-  system,
+  fromFlake,
   ...
 }: let
   exports = {
@@ -24,7 +22,6 @@
   inherit (debug) withContext;
   inherit (lists) elem concatMap asList;
   inherit (modules) collectUserSpecs mkCdAliases mkEnvVars;
-  inherit (system) nixosSystem darwinSystem;
   inherit (types) isString typeOf isAttrs isNull;
 
   build = {
@@ -55,9 +52,21 @@
       message = ''expected one of ["nixos" "darwin"], got ${class}'';
       context = "parsing builder type from class";
     };
+    assert withContext {
+      name = "config.systemBuilder";
+      assertion =
+        if class == "nixos"
+        then fromFlake ? libraries.nixpkgs.nixosSystem
+        else fromFlake ? libraries.nix-darwin.darwinSystem;
+      message = ''
+        The required compiler for class "${class}" was not found in your flake inputs.
+        Make sure you have passed the correct downstream lib/builder mapping.
+      '';
+      context = "validating system builder presence in namespaced flake inputs";
+    };
       if class == "nixos"
-      then nixosSystem
-      else darwinSystem;
+      then fromFlake.libraries.nixpkgs.nixosSystem
+      else fromFlake.libraries.darwin.darwinSystem;
 
   systemType = class:
     assert withContext {
@@ -88,9 +97,9 @@
       specialArgs =
         {
           inherit host flake;
-          inherit (flake) inputs top;
-          lib = args.lib or args.libraries.lib or {};
-          "${args.names.lib}" = removeAttrs (args.libraries or {}) ["lib"];
+          inherit (fromFlake.names) top;
+          inherit (fromFlake) inputs;
+          "${fromFlake.names.lib}" = removeAttrs (args.libraries or {}) ["lib"];
         }
         // removeAttrs args ["modules"];
     in {
@@ -98,7 +107,7 @@
       inherit specialArgs;
 
       modules =
-        core
+        (fromFlake.modules.core or [])
         ++ (args.modules.core or [])
         ++ (host.modules or [])
         ++ (host.imports or [])
@@ -108,7 +117,7 @@
               backupFileExtension = "BaC";
               useGlobalPkgs = true;
               useUserPackages = true;
-              sharedModules = home ++ (args.modules.home or []);
+              sharedModules = (fromFlake.modules.home or []) ++ (args.modules.home or []);
               extraSpecialArgs = specialArgs;
               users =
                 mapAttrs (_: user: {
