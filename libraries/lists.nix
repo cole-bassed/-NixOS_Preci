@@ -1,13 +1,19 @@
-{lix}: let
-  exports = let
-    internal = {
+{
+  attrsets,
+  debug,
+  lists,
+  types,
+  ...
+}: let
+  exports = {
+    scoped = {
       inherit asList nthOr orNull orDefault orEmpty;
 
       isEmpty = isEmpty';
       isNotEmpty = isNotEmpty';
       atOr = nthOr;
     };
-    external = {
+    global = {
       isEmptyList = isEmpty';
       isNotEmptyList = isNotEmpty';
       orDefaultList = orDefault;
@@ -15,12 +21,12 @@
       toList' = asList;
       valueInList = nthOr;
     };
-  in {inherit internal external;};
+  };
 
-  inherit (lix.attrsets) isAttrs;
-  inherit (lix.debug) assertWithContext;
-  inherit (lix.lists) elemAt isList length optionals toList;
-  inherit (lix.types) typeOf isEmpty;
+  inherit (attrsets) isAttrs;
+  inherit (debug) assertWithContext;
+  inherit (lists) elemAt isList length optionals toList;
+  inherit (types) typeOf isEmpty;
 
   isEmpty' = value: value == [];
   isNotEmpty' = value: !isEmpty' value;

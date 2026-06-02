@@ -100,6 +100,7 @@
 }
 // {
   lists = {
+    findFirstList = lib.lists.findFirst;
     inherit
       (lib.lists)
       all
@@ -223,6 +224,36 @@
       setDefaultModuleLocation
       sortProperties
       unifyModuleSyntax
+      ;
+  };
+}
+// {
+  options = {
+    inherit
+      (lib.options)
+      getFiles
+      getValues
+      isOption
+      literalCode
+      literalExpression
+      literalMD
+      mergeDefaultOption
+      mergeEqualOption
+      mergeOneOption
+      mergeUniqueOption
+      mkEnableOption
+      mkOption
+      mkPackageOption
+      mkSinkUndeclaredOptions
+      optionAttrSetToDocList
+      optionAttrSetToDocList'
+      renderOptionValue
+      scrubOptionValue
+      showDefs
+      showFiles
+      showOption
+      showOptionWithDefLocs
+      unknownModule
       ;
   };
 }

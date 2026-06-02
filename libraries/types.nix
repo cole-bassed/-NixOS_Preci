@@ -1,13 +1,19 @@
-{lix}: let
-  exports = let
-    internal = {inherit isEmpty isNotEmpty isNull isValidGeoCoords;};
-    external = internal;
-  in {inherit internal external;};
+{
+  debug,
+  lists,
+  strings,
+  types,
+  ...
+}: let
+  exports = {
+    scoped = {};
+    global = {inherit isEmpty isNotEmpty isNull isValidGeoCoords;};
+  };
 
-  inherit (lix.debug) withContext;
-  inherit (lix.lists) head tail isList optionals reverseList;
-  inherit (lix.strings) concatStrings stringLength stringToCharacters;
-  inherit (lix.types) isAttrs isFloat isFunction isString;
+  inherit (debug) withContext;
+  inherit (lists) head tail isList optionals reverseList;
+  inherit (strings) concatStrings stringLength stringToCharacters;
+  inherit (types) isAttrs isFloat isFunction isString;
 
   # Minimal local trim so predicates doesn't circularly depend on strings.
   trim = s: let

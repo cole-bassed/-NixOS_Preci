@@ -1,6 +1,6 @@
-{lix, ...}: let
-  exports = let
-    internal = {
+{debug, ...}: let
+  exports = {
+    scoped = {
       inherit
         mkTest
         mkTest'
@@ -9,12 +9,13 @@
         assertWithContext
         warnWithContext
         ;
+    };
+    global = {
       withContext = assertWithContext;
     };
-    external = internal;
-  in {inherit internal external;};
+  };
 
-  inherit (lix.debug) addErrorContext assertMsg deepSeq traceIf tryEval;
+  inherit (debug) addErrorContext assertMsg deepSeq traceIf tryEval;
 
   assertMsgFunc = {
     name,

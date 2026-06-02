@@ -1,6 +1,13 @@
-{lix}: let
+{
+  attrsets,
+  debug,
+  lists,
+  strings,
+  types,
+  ...
+}: let
   exports = {
-    internal = {
+    scoped = {
       inherit
         getOrderedOr
         toOrdered
@@ -11,15 +18,18 @@
         orNull
         orDefault
         orEmpty
+        getBySpec
+        findFirst
+        resolveBySpecs
         ;
       orderedOf = toOrdered;
       parsedOf = parseOrdered;
       merge = mergeUnique;
 
       isEmpty = isEmpty';
-      isNotEmpty = isEmpty';
+      isNotEmpty = isNotEmpty';
     };
-    external = {
+    global = {
       orNullAttr = orNull;
       orDefaultAttr = orDefault;
       orEmptyAttr = orEmpty;
@@ -28,50 +38,119 @@
       parseOrderedAttrs = parseOrdered;
       mapParsedOrderedAttrs = mapParsedOrdered;
       mergeUniqueAttrs = mergeUnique;
+      getAttrBySpec = getBySpec;
+      findFirstAttrs = findFirst;
+      resolveAttrsBySpecs = resolveBySpecs;
       isEmptyAttr = isEmpty';
       isNotEmptyAttr = isNotEmpty';
     };
   };
 
-  inherit (lix.attrsets) attrNames hasAttr getAttr listToAttrs mapAttrs optionalAttrs;
-  inherit (lix.lists) filter foldl' genList isList length nthOr;
-  inherit (lix.strings) concatStringsSep;
-  inherit (lix.debug) withContext;
-  inherit (lix.types) isAttrs isEmpty typeOf;
+  inherit
+    (attrsets)
+    attrNames
+    hasAttr
+    # hasAttrByPath
+    attrByPath
+    getAttr
+    listToAttrs
+    mapAttrs
+    optionalAttrs
+    ;
+  inherit
+    (lists)
+    concatMap
+    filter
+    findFirstList
+    foldl'
+    genList
+    isList
+    length
+    map
+    nthOr
+    ;
+  inherit (strings) concatStringsSep;
+  inherit (debug) withContext;
+  inherit (types) isAttrs isEmpty typeOf isString;
 
-  isEmpty' = value: value == {};
-  isNotEmpty' = value: !isEmpty' value;
+  isEmpty' = input: input == {};
+  isNotEmpty' = input: !isEmpty' input;
 
-  orNull = value:
+  orNull = input:
     assert withContext {
-      name = "attrs.orNull";
-      assertion = isEmpty value || isAttrs value;
-      message = "expected an attrset, got ${typeOf value}";
-      context = "evaluating attrs.orNull";
+      name = "attrsets.orNull";
+      assertion = isEmpty input || isAttrs input;
+      message = "expected an attrset, got ${typeOf input}";
+      context = "evaluating attrsets.orNull";
     };
-      if isEmpty value || !(isAttrs value)
+      if isEmpty input || !(isAttrs input)
       then null
-      else value;
+      else input;
 
-  orDefault = default: value:
+  orDefault = default: input:
     assert withContext {
-      name = "attrs.orDefault";
-      assertion = isAttrs default && isAttrs value;
-      message = "expected attrsets, got default=${typeOf default} value=${typeOf value}";
-      context = "evaluating attrs.orDefault";
+      name = "attrsets.orDefault";
+      assertion = isAttrs default && isAttrs input;
+      message = "expected attrsets, got default=${typeOf default} input=${typeOf input}";
+      context = "evaluating attrsets.orDefault";
     };
-      if isNotEmpty' value
-      then value
+      if isNotEmpty' input
+      then input
       else default;
 
-  orEmpty = value:
+  orEmpty = input:
     assert withContext {
-      name = "attrs.orEmpty";
-      assertion = isAttrs value && isNotEmpty' value;
-      message = "expected an attrset or null, got ${typeOf value}";
-      context = "evaluating attrs.orEmpty";
+      name = "attrsets.orEmpty";
+      assertion = isNull input || isAttrs input;
+      message = "expected an attrset or null, got ${typeOf input}";
+      context = "evaluating attrsets.orEmpty";
     };
-      optionalAttrs (isNotEmpty' value) value;
+      optionalAttrs (input != null && isNotEmpty' input) input;
+
+  getBySpec = input: spec:
+    assert withContext {
+      name = "attrsets.getBySpec";
+      assertion = isNull input || isAttrs input;
+      message = "expected input to be an attrset or null, got ${typeOf input}";
+      context = "evaluating attrsets.getBySpec";
+    };
+      if input == null
+      then null
+      else if isList spec
+      then attrByPath spec null input
+      else if isString spec && hasAttr spec input
+      then getAttr spec input
+      else null;
+
+  findFirst = {
+    sets,
+    specs,
+    default ? null,
+  }:
+    assert withContext {
+      name = "attrsets.findFirst'";
+      assertion = isList sets && isList specs;
+      message = "expected sets and specs to be lists";
+      context = "evaluating attrsets.findFirst";
+    };
+      findFirstList (x: x != null) default
+      (concatMap (input: map (spec: getBySpec input spec) specs) sets);
+
+  resolveBySpecs = {
+    input,
+    specs,
+    default ? null,
+  }:
+    assert withContext {
+      name = "attrsets.resolveBySpecs";
+      assertion = (input == null || isAttrs input) && isList specs;
+      message = "expected input to be an attrset or null, and specs to be a list";
+      context = "evaluating attrsets.resolveBySpecs";
+    };
+      findFirst {
+        sets = [input];
+        inherit specs default;
+      };
 
   mergeUnique = {
     items,

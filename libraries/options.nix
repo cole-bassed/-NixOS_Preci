@@ -1,6 +1,12 @@
-{lix}: let
-  exports = let
-    internal = {
+{
+  attrsets,
+  lists,
+  options,
+  types,
+  ...
+}: let
+  exports = {
+    scoped = {
       inherit
         mkEnable
         mkCfg
@@ -12,13 +18,13 @@
         mkLongitudeOption
         ;
     };
-    external = {inherit mkModuleArgs;};
-  in {inherit internal external;};
+    global = {inherit mkModuleArgs;};
+  };
 
-  inherit (lix.attrsets) attrByPath setAttrByPath;
-  inherit (lix.lists) asList;
-  inherit (lix.options) mkOption mkEnableOption;
-  inherit (lix.types) isFloat addCheck float;
+  inherit (attrsets) attrByPath setAttrByPath;
+  inherit (lists) asList;
+  inherit (options) mkOption mkEnableOption;
+  inherit (types) isFloat addCheck float;
 
   mkEnable = {
     name ? null,

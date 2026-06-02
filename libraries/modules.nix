@@ -1,6 +1,18 @@
-{lix}: let
-  exports = let
-    internal = {
+{
+  api,
+  attrsets,
+  defaults,
+  filesystem,
+  lists,
+  modules,
+  names,
+  paths,
+  strings,
+  types,
+  ...
+}: let
+  exports = {
+    scoped = {
       inherit
         readDirAttrs
         resolveEntrypoint
@@ -16,46 +28,81 @@
         importModules
         importProfiles
         mkCdAliases
+        mkConfigurations
         mkNixosConfigurations
         mkDarwinConfigurations
         ;
-      nixosConfiguration = mkNixosConfigurations;
     };
-    external = internal;
-  in {inherit internal external;};
+    global = {
+      inherit mkConfigurations;
+    };
+  };
 
-  inherit (lix.attrsets) attrNames attrValues filterAttrs foldlAttrs genAttrs mapAttrs mapAttrs' mapAttrsToList;
-  inherit (lix.filesystem) baseNameOf pathExists readDir;
-  inherit (lix.lists) asList any concatMap elem findFirst length;
-  inherit (lix.modules) nixosSystem darwinSystem;
-  inherit (lix.strings) hasSuffix toUpper;
-  inherit (lix.types) isAttrs isString isFunction;
-  inherit (lix) defaults;
+  inherit (attrsets) attrNames attrValues filterAttrs foldlAttrs genAttrs mapAttrs mapAttrs' mapAttrsToList recursiveUpdate;
+  inherit (filesystem) baseNameOf pathExists readDir;
+  inherit (lists) asList any concatMap elem findFirst length;
+  inherit (modules) nixosSystem darwinSystem;
+  inherit (strings) hasPrefix hasSuffix toUpper;
+  inherit (types) isAttrs isString isFunction;
+  inherit (api) hosts;
   entrypoint = defaults.entrypoints.nix.main;
   candidates = defaults.entrypoints.nix.candidates;
 
-  mkConfigurations = builder: outputAttr: args: let
-    inherit (args) defaults;
-    hosts = args.api.hosts or {};
-  in
-    assert isAttrs args;
-    assert args ? inputs || throw "inputs must be provided in args"; {
-      ${outputAttr} = mapAttrs (_: host: let
-        modules = (args.modules or []) ++ (host.modules or []) ++ (host.imports or []);
-        system = host.system or defaults.system;
-        dots = host.dots or defaults.dots;
-        top = host.namespace or defaults.namespace;
-        extraArgs = {inherit host;} // args // (args.extraArgs or {});
-      in
-        builder {
-          inherit modules system;
-          specialArgs = {inherit dots top;} // extraArgs;
-        })
-      hosts;
-    };
+  mkNixosConfigurations = mkConfigurations {type = "nixosConfigurations";};
+  mkDarwinConfigurations = mkConfigurations {type = "darwinConfigurations";};
 
-  mkNixosConfigurations = mkConfigurations nixosSystem "nixosConfigurations";
-  mkDarwinConfigurations = mkConfigurations darwinSystem "darwinConfigurations";
+  mkConfigurations = {
+    args ? {inherit defaults paths names;},
+    class ? "nixos",
+  } @ params: let
+    # TODO: Validate clas is one of ["nixos" "darwin"]
+    args = recursiveUpdate params (params.extraArgs or {});
+    # hosts = args.api.hosts or (import paths.api {inherit defaults;});
+    type =
+      if class == "nixos"
+      then "nixosConfigurations"
+      else if class == "darwin"
+      then "darwinConfigurations"
+      else (throw ''mkConfigurations.class: Expected one of ["nixos" "darwin"], got ${class}'');
+    builder =
+      if hasPrefix "nixos" class
+      then nixosSystem
+      else if hasPrefix "darwin"
+      then darwinSystem
+      else throw "mkConfigurations.builder: Unknown type";
+  in {
+    ${type} = mapAttrs (_: api: let
+      host = recursiveUpdate defaults.host api;
+      flake =
+        recursiveUpdate
+        (
+          recursiveUpdate
+          (defaults.flake or {})
+          {inputs = args.inputs or (args.extraArgs.inputs or {});}
+        ) (
+          recursiveUpdate
+          (host.flake or {})
+          {home = host.path or (host.home or (host.dots or null));}
+        );
+    in
+      builder {
+        inherit (host) system;
+        modules =
+          (args.modules or [])
+          ++ (args.extraArgs.modules or [])
+          ++ (host.modules or [])
+          ++ (host.imports or []);
+        specialArgs =
+          {
+            inherit host flake;
+            inherit (flake) inputs top;
+            ${names.lib} = args.${names.lib};
+            inherit (args) lix; # TODO: How can this not be hardcoded, i want to inherit args.${names.lib}
+          }
+          // args;
+      })
+    hosts;
+  };
 
   readDirAttrs = {
     base,

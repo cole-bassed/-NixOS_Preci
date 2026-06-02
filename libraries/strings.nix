@@ -1,6 +1,12 @@
-{lix}: let
-  exports = let
-    internal = {
+{
+  debug,
+  lists,
+  strings,
+  types,
+  ...
+}: let
+  exports = {
+    scoped = {
       inherit
         _applyStr
         _normalizeSymbols
@@ -28,7 +34,7 @@
       isEmpty = isEmpty';
       isNotEmpty = isNotEmpty';
     };
-    external = {
+    global = {
       inherit
         capitalize
         indent
@@ -67,12 +73,12 @@
       trimStringEnd = trimEnd;
       trimStringStart = trimStart;
     };
-  in {inherit internal external;};
+  };
 
-  inherit (lix.lists) head tail genList asList any;
-  inherit (lix.debug) withContext;
-  inherit (lix.types) isEmpty isNotEmpty isList isAttrs isString typeOf;
-  inherit (lix.strings) concatStrings concatStringsSep hasPrefix hasSuffix optionalString removePrefix removeSuffix replaceStrings splitString stringLength substring toLower toUpper;
+  inherit (lists) head tail genList asList any;
+  inherit (debug) withContext;
+  inherit (types) isEmpty isNotEmpty isList isAttrs isString typeOf;
+  inherit (strings) concatStrings concatStringsSep hasPrefix hasSuffix optionalString removePrefix removeSuffix replaceStrings splitString stringLength substring toLower toUpper;
 
   isEmpty' = value: value == "";
   isNotEmpty' = value: !isEmpty' value;

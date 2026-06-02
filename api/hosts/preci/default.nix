@@ -6,18 +6,19 @@
   description = "Dell Precision M2800";
   type = "laptop";
   class = "nixos";
-  dots = "/home/craole/.dots";
   system = "x86_64-linux";
   stateVersion = "25.11";
 
-  localization = {
-    latitude = 18.015;
-    longitude = -77.49;
-    city = "Mandeville, Jamaica";
-    locator = "geoclue2";
-    timeZone = "America/Jamaica";
-    defaultLocale = "en_US.UTF-8";
-  };
+  # paths.flake.local = "/home/craole/.dots";
+
+  # localization = {
+  #   latitude = 18.015;
+  #   longitude = -77.49;
+  #   city = "Mandeville, Jamaica";
+  #   locator = "geoclue2";
+  #   timezone = "America/Jamaica";
+  #   locale = "en_US.UTF-8";
+  # };
 
   users = {
     craole = {

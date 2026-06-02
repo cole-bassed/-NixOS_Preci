@@ -39,20 +39,9 @@
     };
   };
 
-  outputs = {nixpkgs, ...} @ inputs: let
-    src = import ./. {inherit (nixpkgs) lib;};
+  outputs = {...} @ inputs: let
+    args = import ./. {inherit inputs;};
+    inherit (args.lix.modules) mkConfigurations;
   in
-    src.lix.modules.nixosConfiguration {
-      inherit inputs;
-      inherit (src) api defaults;
-      extraArgs = src;
-      modules = [
-        inputs.home-manager.nixosModules.home-manager
-        ./ai
-        ./applications
-        ./interface
-        ./modules
-        ./secrets
-      ];
-    };
+    mkConfigurations {class = "nixos";};
 }

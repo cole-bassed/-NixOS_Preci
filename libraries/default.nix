@@ -1,44 +1,97 @@
 {
   lib,
   defaults,
+  names,
+  paths,
 }: let
   inherit (lib.attrsets) recursiveUpdate optionalAttrs mapAttrs;
   inherit (lib.lists) elem;
+  mkLix = includes:
+    recursiveUpdate legacy (
+      {inherit defaults names paths;}
+      // optionalAttrs (elem "api" includes) {inherit (scoped) api;}
+      // optionalAttrs (elem "attrsets" includes) {inherit (scoped) attrsets;}
+      // optionalAttrs (elem "debug" includes) {inherit (scoped) debug;}
+      // optionalAttrs (elem "modules" includes) {inherit (scoped) modules;}
+      // optionalAttrs (elem "options" includes) {inherit (scoped) options;}
+      // optionalAttrs (elem "strings" includes) {inherit (scoped) strings;}
+      // optionalAttrs (elem "types" includes) {inherit (scoped) types;}
+      // optionalAttrs (elem "lists" includes) {inherit (scoped) lists;}
+    );
 
-  mkLix = includes: {
-    lix = recursiveUpdate legacy (with custom; (
-      {inherit defaults;}
-      // optionalAttrs (elem "attrsets" includes) {attrsets = with attrsets; external // internal;}
-      // optionalAttrs (elem "lists" includes) {lists = with lists; external // internal;}
-      // optionalAttrs (elem "modules" includes) {modules = with modules; external // internal;}
-      // optionalAttrs (elem "options" includes) {options = with options; external // internal;}
-      // optionalAttrs (elem "strings" includes) {strings = with strings; external // internal;}
-      // optionalAttrs (elem "types" includes) {types = with types; external // internal;}
-    ));
-  };
-
-  #~@ Curated from nixpkgs.lib
   legacy = import ./nixpkgs.nix {inherit lib;};
-
-  #~@ Namespaced lix.<name>.*
   custom = {
-    attrsets = import ./attrsets.nix (mkLix ["debug" "lists" "types"]);
-    debug = import ./debug.nix (mkLix ["lists" "types"]);
-    lists = import ./lists.nix (mkLix ["debug" "types"]);
-    modules = import ./modules.nix (mkLix ["debug" "lists" "types"]);
-    options = import ./options.nix (mkLix ["debug" "lists" "types"]);
-    strings = import ./strings.nix (mkLix ["debug" "lists" "types"]);
-    types = import ./types.nix (mkLix ["debug"]);
+    api = import paths.api (mkLix [
+      "attrsets"
+      "modules"
+      "lists"
+    ]);
+    attrsets = import ./attrsets.nix (mkLix [
+      "debug"
+      "lists"
+      "types"
+    ]);
+    debug = import ./debug.nix (mkLix [
+      "lists"
+      "types"
+    ]);
+    filesystem = import ./filesystem.nix (mkLix [
+      "debug"
+      "lists"
+    ]);
+    lists = import ./lists.nix (mkLix [
+      "debug"
+      "types"
+    ]);
+    modules = import ./modules.nix (mkLix [
+      "api"
+      "debug"
+      "lists"
+      "types"
+    ]);
+    options = import ./options.nix (mkLix [
+      "debug"
+      "lists"
+      "types"
+    ]);
+    strings = import ./strings.nix (mkLix [
+      "debug"
+      "lists"
+      "types"
+    ]);
+    types = import ./types.nix (mkLix [
+      "debug"
+    ]);
   };
 
-  #~@ Flat - lix.*
-  aliases = custom.attrsets.internal.merge {
+  scoped =
+    mapAttrs
+    (_: value: value.scoped // value.global)
+    custom;
+
+  global = scoped.attrsets.mergeUnique {
     items = custom;
-    getAttrs = name: custom.${name}.external or {};
-    what = "libraries: external aliases";
+    getAttrs = name: custom.${name}.global or {};
+    what = "libraries";
+    owner = name: "${names.lib}.${name}.global";
   };
+  # name = names.lib;
+  # api = import paths.api {inherit ${name}; inherit defaults};
+  # mkLix = includes: {
+  #   ${name} = recursiveUpdate legacy (
+  #     {inherit defaults names paths;}
+  #     // optionalAttrs (elem "attrsets" includes) {inherit (scoped) attrsets;}
+  #     // optionalAttrs (elem "debug" includes) {inherit (scoped) debug;}
+  #     // optionalAttrs (elem "modules" includes) {inherit (scoped) modules;}
+  #     // optionalAttrs (elem "options" includes) {inherit (scoped) options;}
+  #     // optionalAttrs (elem "strings" includes) {inherit (scoped) strings;}
+  #     // optionalAttrs (elem "types" includes) {inherit (scoped) types;}
+  #     // optionalAttrs (elem "lists" includes) {inherit (scoped) lists;}
+  #   );
+  # };
 in
-  {}
-  # // aliases
-  // custom
-# mapAttrs (_: lib: lib.internal) custom
+  recursiveUpdate legacy (
+    {}
+    // global
+    // scoped
+  )

@@ -1,32 +1,71 @@
-{lib ? (import <nixpkgs/lib>), ...}: let
-  inherit (lib.lists) head;
+{
+  lib ? null,
+  inputs ? null,
+  names ? {
+    lib = "lix";
+  },
+  paths ? {
+    src = ./.;
+    ai = ./ai;
+    api = ./api;
+    apps = ./applications;
+    docs = ./documentation;
+    env = ./secrets;
+    interface = ./interface;
+    lib = ./libraries;
+    mods = ./modules;
+  },
+  defaults ? {
+    host = rec {
+      name = null;
+      id = null;
+      description = null;
+      type = null;
+      class = "nixos";
+      system = "x86_64-linux";
+      stateVersion = null; #? Must be the same as when the OS was installed
+      paths = {
+        flake = flake.home;
+      };
 
-  lix = import ./libraries {inherit lib defaults;};
-  api = import ./api {inherit lib lix defaults;};
+      flake = {
+        inherit inputs;
+        name = "dots";
+        home = "/etc/nixos";
+        top = "_";
+      };
 
-  defaults = {
-    # };
-    namespace = "dots";
-    dots = "/etc/nixos";
+      localization = {
+        latitude = 18.015;
+        longitude = -77.49;
+        locator = "manual";
+        city = "Mandeville/Jamaica";
+        timezone = "America/Jamaica";
+        language = "en_US.UTF-8";
+      };
+    };
     ignore = [
       "archive"
       "backup"
       "review"
       "temp"
     ];
-    entrypoints.nix = let
-      ext = "nix";
-      candidates = map (name: "${name}.${ext}") [
-        "default"
-        "shell"
-        "flake"
-        "configuration"
-        "_"
-      ];
-    in {
-      inherit candidates;
-      main = head candidates;
-    };
     tags = ["core" "home"];
-  };
-in {inherit lix api defaults;}
+  },
+  libraries ? (import ./libraries {
+    lib =
+      if lib != null
+      then lib
+      else if inputs ? nixpkgs.lib
+      then inputs.nixpkgs.lib
+      else (import <nixpkgs/lib>);
+    inherit defaults names paths;
+  }),
+  modules ? (with paths; [
+    mods
+  ]),
+  ...
+}: {
+  inherit defaults libraries modules;
+  "${names.lib}" = libraries;
+}
