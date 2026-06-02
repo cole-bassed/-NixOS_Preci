@@ -1,6 +1,7 @@
 {
   lib ? null,
   inputs ? null,
+  modules ? {},
   ...
 }: let
   names = {
@@ -56,10 +57,6 @@
     ];
     tags = ["core" "home"];
   };
-
-  modules = with paths; [
-    mods
-  ];
 
   libraries = import ./libraries {
     lib =

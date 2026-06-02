@@ -2,34 +2,32 @@
   description = "Configuration Flake";
 
   inputs = {
-    nixpkgs = {
-      url = "github:NixOS/nixpkgs/nixos-unstable";
-    };
-    hermes-agent = {
-      url = "github:NousResearch/hermes-agent";
-    };
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+
+    hermes-agent.url = "github:NousResearch/hermes-agent";
+    vicinae.url = "github:vicinaehq/vicinae";
+    quickshell.url = "github:outfoxxed/quickshell";
+
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    sops-nix = {
+
+    sops = {
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
     niri = {
       url = "github:sodiboo/niri-flake";
-    };
-    vicinae = {
-      url = "github:vicinaehq/vicinae";
-    };
-    quickshell = {
-      url = "github:outfoxxed/quickshell";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
     noctalia = {
       url = "github:noctalia-dev/noctalia-shell";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
     zen-browser = {
       url = "github:0xc000022070/zen-browser-flake";
       inputs = {
@@ -37,11 +35,44 @@
         home-manager.follows = "home-manager";
       };
     };
+
+    stylix = {
+      url = "github:nix-community/stylix";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        home-manager.follows = "home-manager";
+      };
+    };
+
+    treefmt = {
+      url = "github:numtide/treefmt-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = {...} @ inputs: let
-    args = import ./. {inherit inputs;};
+  outputs = {self, ...} @ inputs: let
+    modules = {
+      core = with inputs; [
+        hermes-agent.nixosModules.default
+        home-manager.nixosModules.home-manager
+        niri.nixosModules.niri
+        noctalia.nixosModules.default
+        sops.nixosModules.default
+        stylix.nixosModules.stylix
+      ];
+
+      home = with inputs; [
+        niri.homeModules.config
+        niri.homeModules.niri
+        niri.homeModules.stylix
+        noctalia.homeModules.default
+        sops.homeModules.default
+        stylix.homeManagerModules.stylix
+        vicinae.homeManagerModules.default
+        zen-browser.homeModules.default
+      ];
+    };
+    args = import ./. {inherit inputs modules;};
     inherit (args.libraries.config) mkConfigurations;
-  in
-    mkConfigurations {class = "nixos";};
+  in (mkConfigurations {class = "nixos";});
 }

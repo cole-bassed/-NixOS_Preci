@@ -82,13 +82,6 @@
           inputs = args.inputs or (args.extraArgs.inputs or {});
           home = host.path or (host.home or (host.dots or null));
         };
-    in {
-      inherit (host) system;
-      modules =
-        (args.modules or [])
-        ++ (args.extraArgs.modules or [])
-        ++ (host.modules or [])
-        ++ (host.imports or []);
       specialArgs =
         {
           inherit host flake lib;
@@ -96,6 +89,49 @@
           "${args.names.lib}" = lib;
         }
         // removeAttrs args ["modules"];
+    in {
+      inherit (host) system specialArgs;
+      modules =
+        (args.modules.core or [])
+        ++ (host.modules or [])
+        ++ (host.imports or [])
+        ++ [
+          {
+            home-manager = {
+              backupFileExtension = "BaC";
+              useGlobalPkgs = true;
+              useUserPackages = true;
+              sharedModules = args.modules.home or [];
+              extraSpecialArgs = specialArgs;
+              users =
+                mapAttrs (_: user: {
+                  config,
+                  osConfig,
+                  top,
+                  ...
+                }: {
+                  imports =
+                    [
+                      {
+                        home = {
+                          inherit (osConfig.system) stateVersion;
+                          sessionVariables = mkEnvVars "" (config.${top}.paths or {});
+                          shellAliases = mkCdAliases (config.${top}.paths or {});
+                        };
+                        programs.home-manager.enable = true;
+                      }
+                    ]
+                    ++ concatMap
+                    (spec: asList (spec.home or null))
+                    (collectUserSpecs {
+                      inherit user;
+                      args = {inherit lib top host inputs;};
+                    });
+                })
+                loginUsers;
+            };
+          }
+        ];
     })
     hosts;
 in
