@@ -9,39 +9,22 @@
 }: let
   exports = {
     # scoped = {
-    #   inherit
-    #     readDirAttrs
-    #     resolveEntrypoint
-    #     importModule
-    #     collectSpecs
-    #     collectNamedSpecs
-    #     collectUserSpecs
-    #     getUsers
-    #     mkEnvVars
-    #     mkHomeUser
-    #     importAll
-    #     mkHomeUsers
-    #     importModules
-    #     importProfiles
-    #     mkCdAliases
-    #     ;
     # };
     global = {
       inherit
-        readDirAttrs
-        resolveEntrypoint
-        importModule
-        collectSpecs
         collectNamedSpecs
-        collectUserSpecs
+        collectSpecs
         getUsers
-        mkEnvVars
-        mkHomeUser
         importAll
-        mkHomeUsers
+        importModule
         importModules
         importProfiles
         mkCdAliases
+        mkEnvVars
+        mkHomeUser
+        mkHomeUsers
+        readDirAttrs
+        resolveEntrypoint
         ;
     };
   };
@@ -111,6 +94,7 @@
       else base + "/${name}";
     imported = import resolved;
   in
+    # resolved;
     if isFunction imported
     then imported args
     else imported;
@@ -181,12 +165,6 @@
       })
       raw
     else raw;
-
-  # import all files from user.imports, each returns { core = {...}; home = {...}; }
-  collectUserSpecs = args:
-    map
-    (fn: import fn args)
-    (asList (args.imports or null));
 
   getUsers = declared: let
     # ── group constructor ────────────────────────────────────────────────────
@@ -281,9 +259,7 @@
           programs.home-manager.enable = true;
         })
       ]
-      ++ concatMap
-      (spec: asList (spec.home or null))
-      (collectUserSpecs user);
+      ++ (user.imports or []);
   };
 
   # modules: shared across all users

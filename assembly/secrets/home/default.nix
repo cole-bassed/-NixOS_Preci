@@ -1,5 +1,1 @@
-flake: {
-  # config,
-  # pkgs,
-  ...
-}: {home = [];}
+flake: _: {home = [];}

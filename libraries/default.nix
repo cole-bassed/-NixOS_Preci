@@ -35,7 +35,7 @@
     );
 
   custom = {
-    api = import defaults.paths.api (mkLix [
+    api = import paths.api (mkLix [
       "attrsets"
       "modules"
       "lists"

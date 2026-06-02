@@ -21,9 +21,9 @@ in {
         "sr_mod"
         "sdhci_pci"
       ];
-      kernelModules = ["amdgpu"];
+      kernelModules = [];
     };
-    kernelModules = ["kvm-amd"];
+    kernelModules = ["kvm-intel"];
     kernelPackages = pkgs.linuxPackages_latest;
     kernelPatches = [
       {

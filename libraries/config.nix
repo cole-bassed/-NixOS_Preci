@@ -30,8 +30,8 @@
   inherit (api) hosts;
   inherit (attrsets) mapAttrs genAttrs optionalAttrs recursiveUpdate;
   inherit (debug) withContext;
-  inherit (lists) elem concatMap asList;
-  inherit (modules) collectUserSpecs mkCdAliases mkEnvVars;
+  inherit (lists) elem;
+  inherit (modules) mkCdAliases mkEnvVars;
   inherit (types) isString typeOf isAttrs isNull;
 
   build = {
@@ -148,12 +148,7 @@
                       }
                     ]
                     ++ (user.modules or [])
-                    ++ (user.imports or [])
-                    ++ (
-                      concatMap
-                      (spec: asList (spec.home or null))
-                      (collectUserSpecs user)
-                    );
+                    ++ (user.imports or []);
                 })
                 (host.users.byStatus.enabled.values or {});
             };

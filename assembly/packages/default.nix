@@ -4,7 +4,7 @@ in {
   packages = forEachSystem (pkgs: {});
   devShells = forEachSystem (pkgs: {
     default = pkgs.mkShell {
-      name = flake.defaults.info.name;
+      inherit (flake) name;
       packages = with pkgs; [git sops];
     };
   });

@@ -1,5 +1,5 @@
 {
-  user,
+  config,
   top,
   ...
 }: let
@@ -9,20 +9,17 @@
     cole-bassed = "75517056+cole-bassed@users.noreply.github.com";
   };
 in {
-  core = {};
-  home = {
-    ${top}.applications = {
-      git = {
-        enable = true;
-        inherit profiles;
-        defaultProfile = "craole";
-        extraRepositories = {"${user.home}/.dots/" = "cole-bassed";};
-      };
-      zen-browser.enable = true;
+  ${top}.applications = {
+    git = {
+      enable = true;
+      inherit profiles;
+      defaultProfile = "craole";
+      extraRepositories = {"${config.home.homeDirectory}/.dots/" = "cole-bassed";};
     };
-    home.sessionVariables = {
-      EDITOR = "hx";
-      VISUAL = "code";
-    };
+    zen-browser.enable = true;
+  };
+  home.sessionVariables = {
+    EDITOR = "hx";
+    VISUAL = "code";
   };
 }

@@ -17,14 +17,10 @@
 
   paths = {
     src = ./.;
-    ai = ./ai;
     api = ./api;
-    apps = ./applications;
     docs = ./documentation;
-    env = ./secrets;
-    interface = ./interface;
+    cfg = ./assembly;
     lib = ./libraries;
-    base = ./base;
   };
 
   defaults = {
@@ -44,7 +40,7 @@
         locator = "manual";
         city = "Mandeville/Jamaica";
         timezone = "America/Jamaica";
-        language = "en_US.UTF-8";
+        locale = "en_US.UTF-8";
       };
     };
     excludes = [
@@ -57,6 +53,7 @@
   };
 in {
   inherit inputs packages modules defaults;
+  inherit (info) name;
   libraries = import ./libraries {
     inherit
       defaults
