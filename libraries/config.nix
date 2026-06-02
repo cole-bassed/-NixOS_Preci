@@ -16,11 +16,11 @@
     };
   };
 
-  inherit (api) hosts;
+  inherit (api) hosts users;
   inherit (attrsets) mapAttrs optionalAttrs recursiveUpdate;
   inherit (debug) withContext;
-  inherit (lists) elem;
-  inherit (modules) nixosSystem darwinSystem;
+  inherit (lists) elem concatMap asList;
+  inherit (modules) collectUserSpecs mkCdAliases mkEnvVars nixosSystem darwinSystem;
   inherit (types) isString typeOf isAttrs isNull;
 
   build = {
@@ -82,6 +82,7 @@
           inputs = args.inputs or (args.extraArgs.inputs or {});
           home = host.path or (host.home or (host.dots or null));
         };
+
       specialArgs =
         {
           inherit host flake lib;
@@ -91,6 +92,7 @@
         // removeAttrs args ["modules"];
     in {
       inherit (host) system specialArgs;
+
       modules =
         (args.modules.core or [])
         ++ (host.modules or [])
@@ -121,14 +123,16 @@
                         programs.home-manager.enable = true;
                       }
                     ]
-                    ++ concatMap
-                    (spec: asList (spec.home or null))
-                    (collectUserSpecs {
-                      inherit user;
-                      args = {inherit lib top host inputs;};
-                    });
+                    ++ (
+                      concatMap
+                      (spec: asList (spec.home or null))
+                      (collectUserSpecs {
+                        inherit user;
+                        args = specialArgs;
+                      })
+                    );
                 })
-                loginUsers;
+                (host.users.byStatus.enabled.values or {});
             };
           }
         ];
