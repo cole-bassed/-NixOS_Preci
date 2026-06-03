@@ -6,13 +6,15 @@
   lists,
   modules,
   types,
-  fromFlake,
+  # fromFlake,
+  src,
   ...
 }: let
   exports = {
     scoped = {
       inherit
-        build
+        flake
+        systems
         resolve
         systemBuilder
         systemType
@@ -21,20 +23,42 @@
         ;
     };
     global = {
+      buildFlake = flake;
+      buildSystems = systems;
       forEachSystem = perSystem;
       resolveFlakeConfig = resolve;
-      mkConfigurations = build;
+      mkConfigurations = systems;
     };
   };
 
   inherit (api) hosts;
-  inherit (attrsets) mapAttrs genAttrs optionalAttrs recursiveUpdate;
+  inherit
+    (attrsets)
+    attrValues
+    filterAttrs
+    mapAttrs
+    mergeAttrsList
+    genAttrs
+    optionalAttrs
+    recursiveUpdate
+    ;
   inherit (debug) withContext;
   inherit (lists) elem;
   inherit (modules) mkCdAliases mkEnvVars;
-  inherit (types) isString typeOf isAttrs isNull;
+  inherit
+    (types)
+    isString
+    typeOf
+    isAttrs
+    # isNull
+    ;
 
-  build = {
+  flake = spec:
+    mergeAttrsList (
+      map (path: import path src) (attrValues (filterAttrs (name: _: spec.${name} or false) src.paths))
+    );
+
+  systems = {
     flake ? null,
     class ? "nixos",
   }:
@@ -53,12 +77,17 @@
       type = systemType class;
       builder = systemBuilder class;
       hosts = resolve flake;
-    in {${type} = mapAttrs (_: builder) hosts;};
+    in {
+      ${type} = mapAttrs (_: builder) hosts;
+    };
 
   systemBuilder = class:
     assert withContext {
       name = "config.systemBuilder";
-      assertion = elem class ["nixos" "darwin"];
+      assertion = elem class [
+        "nixos"
+        "darwin"
+      ];
       message = ''expected one of ["nixos" "darwin"], got ${class}'';
       context = "parsing builder type from class";
     };
@@ -81,7 +110,10 @@
   systemType = class:
     assert withContext {
       name = "config.systemType";
-      assertion = elem class ["nixos" "darwin"];
+      assertion = elem class [
+        "nixos"
+        "darwin"
+      ];
       message = ''expected one of ["nixos" "darwin"], got ${class}'';
       context = "parsing type of config from class for config.mkConfigurations";
     };
@@ -90,77 +122,76 @@
       else "nixosConfigurations";
 
   resolve = value: let
-    args =
-      recursiveUpdate
-      defaults
-      (optionalAttrs (isAttrs value) value);
+    args = recursiveUpdate defaults (optionalAttrs (isAttrs value) value);
   in
-    mapAttrs (_: spec: let
-      host = recursiveUpdate defaults.host spec;
-      flake =
-        recursiveUpdate (defaults.flake or {}) (host.flake or {})
-        // {
-          inputs = args.inputs or (args.extraArgs.inputs or {});
-          home = host.path or (host.home or (host.dots or null));
-        };
+    mapAttrs (
+      _: spec: let
+        host = recursiveUpdate defaults.host spec;
+        flake =
+          recursiveUpdate (defaults.flake or {}) (host.flake or {})
+          // {
+            inputs = args.inputs or (args.extraArgs.inputs or {});
+            home = host.path or (host.home or (host.dots or null));
+          };
 
-      specialArgs =
-        fromFlake
-        // {
-          "${fromFlake.names.top}_${fromFlake.name}" = "red";
-          inherit host flake;
-          "${fromFlake.names.lib}" = removeAttrs (args.libraries or {}) ["lib"];
-        }
-        // removeAttrs args ["modules"];
-    in {
-      inherit (host) system;
-      inherit specialArgs;
-
-      modules =
-        (fromFlake.modules.core or [])
-        ++ (args.modules.core or [])
-        ++ (host.modules or [])
-        ++ (host.imports or [])
-        ++ [
-          {
-            home-manager = {
-              backupFileExtension = "BaC";
-              useGlobalPkgs = true;
-              useUserPackages = true;
-              sharedModules = (fromFlake.modules.home or []) ++ (args.modules.home or []);
-              extraSpecialArgs = specialArgs;
-              users =
-                mapAttrs (_: user: {
-                  config,
-                  osConfig,
-                  top,
-                  ...
-                }: {
-                  imports =
-                    [
-                      {
-                        home = {
-                          inherit (osConfig.system) stateVersion;
-                          sessionVariables = mkEnvVars "" (config.${top}.paths or {});
-                          shellAliases = mkCdAliases (config.${top}.paths or {});
-                        };
-                        programs.home-manager.enable = true;
-                      }
-                    ]
-                    ++ (user.modules or [])
-                    ++ (user.imports or []);
-                })
-                (host.users.byStatus.enabled.values or {});
-            };
+        specialArgs =
+          fromFlake
+          // {
+            "${fromFlake.names.top}_${fromFlake.name}" = "red";
+            inherit host flake;
+            "${fromFlake.names.lib}" = removeAttrs (args.libraries or {}) ["lib"];
           }
-        ];
-    })
+          // removeAttrs args ["modules"];
+      in {
+        inherit (host) system;
+        inherit specialArgs;
+
+        modules =
+          (fromFlake.modules.core or [])
+          ++ (args.modules.core or [])
+          ++ (host.modules or [])
+          ++ (host.imports or [])
+          ++ [
+            {
+              home-manager = {
+                backupFileExtension = "BaC";
+                useGlobalPkgs = true;
+                useUserPackages = true;
+                sharedModules = (fromFlake.modules.home or []) ++ (args.modules.home or []);
+                extraSpecialArgs = specialArgs;
+                users = mapAttrs (
+                  _: user: {
+                    config,
+                    osConfig,
+                    top,
+                    ...
+                  }: {
+                    imports =
+                      [
+                        {
+                          home = {
+                            inherit (osConfig.system) stateVersion;
+                            sessionVariables = mkEnvVars "" (config.${top}.paths or {});
+                            shellAliases = mkCdAliases (config.${top}.paths or {});
+                          };
+                          programs.home-manager.enable = true;
+                        }
+                      ]
+                      ++ (user.modules or [])
+                      ++ (user.imports or []);
+                  }
+                ) (host.users.byStatus.enabled.values or {});
+              };
+            }
+          ];
+      }
+    )
     hosts;
 
-  supportedSystems = ["x86_64-linux" "aarch64-linux"]; # TODO: api.hosts should tell use all the needed systems
-  perSystem = fn:
-    genAttrs supportedSystems (
-      system: fn fromFlake.packages.nixpkgs.${system}
-    );
+  supportedSystems = [
+    "x86_64-linux"
+    "aarch64-linux"
+  ]; # TODO: api.hosts should tell use all the needed systems
+  perSystem = fn: genAttrs supportedSystems (system: fn fromFlake.packages.nixpkgs.${system});
 in
   exports

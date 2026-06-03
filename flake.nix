@@ -49,15 +49,20 @@
     };
   };
 
-  outputs = {self, ...} @ inputs:
-    import ./assembly (
-      import ./. {
-        inherit inputs;
-        packages = with inputs; {
-          nixpkgs = nixpkgs.legacyPackages;
+  outputs = {self, ...} @ inputs: let
+    src = import ./. {
+      flake = with inputs; {
+        inherit self;
+
+        libraries = {
+          nixpkgs = nixpkgs.lib;
+          home-manager = home-manager.lib;
+          treefmt = treefmt.lib;
+          # darwin = nix-darwin.lib or { };
         };
+
         modules = {
-          core = with inputs; [
+          core = [
             hermes-agent.nixosModules.default
             home-manager.nixosModules.home-manager
             niri.nixosModules.niri
@@ -66,7 +71,7 @@
             stylix.nixosModules.stylix
           ];
 
-          home = with inputs; [
+          home = [
             niri.homeModules.config
             niri.homeModules.niri
             niri.homeModules.stylix
@@ -77,12 +82,17 @@
             zen-browser.homeModules.default
           ];
         };
-        libraries = with inputs; {
-          nixpkgs = nixpkgs.lib;
-          home-manager = home-manager.lib;
-          treefmt = treefmt.lib;
-          darwin = nix-darwin.lib or {};
+
+        packages = {
+          nixpkgs = nixpkgs.legacyPackages;
         };
-      }
-    );
+      };
+    };
+  in
+    src.${src.libraries.${src.names.lib}}.config.flake {
+      configurations = true;
+      utilities = true;
+      packages = true;
+      templates = false;
+    };
 }
