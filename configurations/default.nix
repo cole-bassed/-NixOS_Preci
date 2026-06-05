@@ -1,2 +1,6 @@
-{libraries, ...} @ base:
-libraries.assemble.configurations base {color = "red";}
+{
+  lix,
+  args,
+  ...
+} @ base:
+lix.assemble.configurations base args

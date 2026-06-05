@@ -65,7 +65,10 @@
 in
   src
   // {
-    _base = src;
-    flake = flake';
-    inherit src;
+    flake =
+      if flake != {}
+      then flake
+      else null;
+
+    "${src.names.lib}" = src.libraries;
   }

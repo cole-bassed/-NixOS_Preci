@@ -38,7 +38,6 @@
   inherit (lists) elem unique;
   inherit (modules) mkCdAliases mkEnvVars;
   inherit (types) isAttrs isBool isFunction isNotEmpty isString typeOf;
-
   systems = {
     args ? null,
     class ? "nixos",
@@ -57,8 +56,8 @@
     }; let
       type = systemType class;
       builder = systemBuilder class;
-      hosts = assemble.flake args;
-    in {${type} = mapAttrs (_: builder) hosts;};
+      resolved = assemble.configurations args {};
+    in {${type} = mapAttrs (_: builder) resolved;};
 
   systemBuilder = class:
     assert withContext {
@@ -194,7 +193,8 @@
                       osConfig,
                       ...
                     }: {
-                      imports = [
+                      imports =
+                        [
                           {
                             home = {
                               inherit (osConfig.system) stateVersion;
