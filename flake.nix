@@ -89,7 +89,7 @@
       };
     };
   in
-    src.${src.libraries.${src.names.lib}}.config.flake {
+    src.libraries.assemble.flake src {
       configurations = true;
       utilities = true;
       packages = true;

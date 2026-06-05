@@ -1,22 +1,11 @@
-{
-  src,
-  attrsets,
-  lists,
-  ...
-}: let
+{lists, ...}: let
   exports = {
-    scoped = {inherit assemble entrypoint entrypoints;};
+    scoped = {inherit entrypoint entrypoints;};
     global = {inherit entrypoint entrypoints;};
   };
 
-  inherit (attrsets) attrValues filterAttrs mergeAttrsList;
   # inherit (debug) withContext;
   inherit (lists) head;
-
-  assemble = spec:
-    mergeAttrsList (
-      map (path: import path src) (attrValues (filterAttrs (name: _: spec.${name} or false) src.paths))
-    );
 
   entrypoints.nix = let
     ext = "nix";

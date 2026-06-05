@@ -8,8 +8,23 @@
   ...
 }: let
   exports = {
-    # scoped = {
-    # };
+    scoped = {
+      inherit
+        collectNamedSpecs
+        collectSpecs
+        getUsers
+        importAll
+        importModule
+        importModules
+        importProfiles
+        mkCdAliases
+        mkEnvVars
+        mkHomeUser
+        mkHomeUsers
+        readDirAttrs
+        resolveEntrypoint
+        ;
+    };
     global = {
       inherit
         collectNamedSpecs

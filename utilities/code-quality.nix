@@ -1,9 +1,10 @@
-flake: let
+lib: let
   path = flake.inputs.self;
-  inherit (flake.libraries) forEachSystem treefmt;
+  inherit (lib.treefmt) evalModule;
+  inherit (lib.config) forEachSystem;
 
   evalFor = pkgs:
-    treefmt.evalModule pkgs {
+    evalModule pkgs {
       projectRootFile = "flake.nix";
       programs = {
         alejandra.enable = true;

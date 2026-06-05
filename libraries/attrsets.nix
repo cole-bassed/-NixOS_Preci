@@ -49,29 +49,8 @@
     };
   };
 
-  inherit
-    (attrsets)
-    attrNames
-    filterAttrs
-    hasAttr
-    attrByPath
-    getAttr
-    listToAttrs
-    mapAttrs
-    optionalAttrs
-    ;
-  inherit
-    (lists)
-    concatMap
-    filter
-    findFirstList
-    foldl'
-    genList
-    isList
-    length
-    map
-    nthOr
-    ;
+  inherit (attrsets) attrNames filterAttrs hasAttr attrByPath getAttr listToAttrs mapAttrs optionalAttrs;
+  inherit (lists) concatMap filter findFirstList foldl' genList isList length map nthOr;
   inherit (strings) concatStringsSep;
   inherit (debug) withContext;
   inherit (types) isAttrs isEmpty typeOf isString;
@@ -159,14 +138,14 @@
 
   mergeUnique = {
     items,
-    getAttrs,
+    attrs,
     what ? "attributes",
     owner ? (name: name),
   }:
     foldl'
     (
       acc: name: let
-        incoming = getAttrs name;
+        incoming = attrs name;
         collisions = filter (k: hasAttr k acc) (attrNames incoming);
       in
         if collisions == []

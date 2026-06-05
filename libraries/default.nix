@@ -1,15 +1,20 @@
-{src, ...}: let
-  legacy = import ./imports src;
-
+{
+  flake,
+  names,
+  defaults,
+  paths,
+  name ? names.lib,
+  ...
+}: let
+  legacy = import ./imports (flake.libraries or {});
   custom = let
-    name = src.names.lib;
     inherit (legacy.attrsets) recursiveUpdate optionalAttrs mapAttrs;
     inherit (legacy.lists) elem;
 
     mkLix = with scoped;
       includes:
         recursiveUpdate legacy (
-          {inherit src;}
+          {inherit flake names defaults paths;}
           // optionalAttrs (elem "api" includes) {inherit api;}
           // optionalAttrs (elem "attrsets" includes) {inherit attrsets;}
           // optionalAttrs (elem "config" includes) {inherit config;}
@@ -23,7 +28,7 @@
         );
 
     libraries = {
-      api = import src.paths.api (mkLix [
+      api = import paths.api (mkLix [
         "attrsets"
         "modules"
         "lists"
@@ -76,17 +81,21 @@
       ]);
     };
 
-    scoped = mapAttrs (_: value: (value.scoped or {}) // (value.global or {})) libraries;
+    scoped = mapAttrs (_: library: (library.scoped or {})) libraries;
 
     global = scoped.attrsets.mergeUnique {
-      items = libraries;
-      getAttrs = library: libraries.${library}.global or (libraries.${library} or {});
-      what = "libraries";
       owner = library: "${name}.${library}.global";
+      what = "libraries";
+      items = libraries;
+      attrs = library:
+        libraries.${library}.global or (libraries.${library} or {});
     };
   in
-    global // scoped;
-in {
-  lib = legacy;
-  "${name}" = recursiveUpdate legacy custom;
-}
+    global // scoped // {inherit global scoped;};
+in
+  {
+    lib = legacy;
+    "${name}" = custom;
+  }
+  # // legacy #? Already spead into custom
+  // custom

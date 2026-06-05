@@ -9,9 +9,10 @@
         assertWithContext
         warnWithContext
         ;
+      withContext = assertWithContext;
     };
     global = {
-      withContext = assertWithContext;
+      inherit assertWithContext warnWithContext;
     };
   };
 
