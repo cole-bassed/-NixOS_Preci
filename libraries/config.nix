@@ -33,30 +33,32 @@
   };
 
   inherit (api) hosts;
-  inherit (attrsets) attrValues filterAttrs genAttrs mapAttrs mapAttrsToList mergeAttrsList optionalAttrs recursiveUpdate;
+  inherit (attrsets) attrValues filterAttrs genAttrs mapAttrs mapAttrsToList mergeAttrsList optionalAttrs orEmpty recursiveUpdate;
   inherit (debug) withContext;
   inherit (lists) elem unique;
   inherit (modules) mkCdAliases mkEnvVars;
   inherit (types) isAttrs isBool isFunction isNotEmpty isString typeOf;
+
   systems = {
+    base,
     args ? null,
-    class ? "nixos",
+    class ? defaults.host.class,
   }:
     assert withContext {
-      name = "config.build";
+      name = "config.systems";
       assertion = isString class;
       message = "class must be a string, got ${typeOf class}";
-      context = "validating class type in build";
+      context = "validating class type in systems";
     };
     assert withContext {
-      name = "config.build";
+      name = "config.systems";
       assertion = isNull args || isAttrs args;
       message = "args must be an attribute set or null, got ${typeOf args}";
-      context = "validating args type in build";
+      context = "validating args type in systems";
     }; let
       type = systemType class;
       builder = systemBuilder class;
-      resolved = assemble.configurations args {};
+      resolved = assemble.configurations base (orEmpty args);
     in {${type} = mapAttrs (_: builder) resolved;};
 
   systemBuilder = class:
