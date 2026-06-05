@@ -14,18 +14,19 @@
 # secrets = importModules (moduleArgs // {base = ../secrets;});
 # groupImports = groups: concatMap (group: group.imports or []) groups;
 # groupHome = groups: concatMap (group: group.home-manager.sharedModules or []) groups;
-{libraries, ...} @ base: libraries.assemble.configurations base {
-    modules = ./modules/base;
-    # modules.core = [
-    #   ({host, ...}: {
-    #     system.stateVersion = host.stateVersion or null;
-    #     # config.system.stateVersion = config.system.nixos.release;
-    #   })
-    # ]
-    # ++ groupImports (modules.imports or []) ++ (secrets.imports or []);
+{libraries, ...} @ base:
+libraries.assemble.configurations base {
+  modules = ./modules/base;
+  # modules.core = [
+  #   ({host, ...}: {
+  #     system.stateVersion = host.stateVersion or null;
+  #     # config.system.stateVersion = config.system.nixos.release;
+  #   })
+  # ]
+  # ++ groupImports (modules.imports or []) ++ (secrets.imports or []);
 
-    # modules.home =
-    #   groupHome (modules.imports or [])
-    #   ++ (modules.home-manager.sharedModules or [])
-    #   ++ (secrets.home-manager.sharedModules or []);
-  }
+  # modules.home =
+  #   groupHome (modules.imports or [])
+  #   ++ (modules.home-manager.sharedModules or [])
+  #   ++ (secrets.home-manager.sharedModules or []);
+}
