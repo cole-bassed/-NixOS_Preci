@@ -1,17 +1,16 @@
 {
-  flake,
-  names,
   defaults,
-  paths,
+  inputs,
   name ? names.lib,
-  libraries ? flake.libraries or {},
+  names,
+  paths,
   ...
 }: let
-  external = import ./external {inherit libraries;};
-  internal = import ./internal {inherit flake names defaults paths name external;};
+  external = import ./external {inherit inputs defaults;};
+  internal = import ./internal {inherit external names defaults paths name;};
 in
   {
-    lib = external;
+    lib = external.libraries;
     "${name}" = internal;
   }
   // external

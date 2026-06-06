@@ -124,149 +124,17 @@
     defaults = {
       allowUnfree = true;
       nixpkgs = inputs.nixCore;
-    };
-
-    lib = libraries.nixpkgs // libraries;
-    inherit (lib.custom) collectModules filterInputs preferDefaultModules;
-    inherit (lib.attrsets) attrValues mapAttrs filterAttrs;
-    inherit (lib.lists) concatLists elem optionals;
-    inherit (builtins) isAttrs isFunction isList isPath;
-
-    libraries = with inputs; {
-      nixpkgs = defaults.nixpkgs.lib;
-      darwin = nixDarwin.lib;
-      home-manager = nixHM.lib;
-      treefmt = treeFormatter.lib;
-      custom = rec {
-        getAttrsDeep = level: let
-          fn = depth: value:
-            if depth <= 0
-            then "..."
-            else if isFunction value
-            then "<function>"
-            else if isPath value
-            then "<path>"
-            else if isList value
-            then map (fn (depth - 1)) value
-            else if isAttrs value
-            then mapAttrs (_: fn (depth - 1)) value
-            else value;
-        in
-          fn level;
-
-        mkIncludes = excludes: set:
-          filterAttrs (n: _: !(elem n excludes)) set;
-
-        filterInputs = extraExcludes: let
-          excludes =
-            [
-              #~@ Core infrastructure
-              "self"
-              "nixCore"
-              "nixLegacy"
-              "nixDarwin"
-              "nixEdge"
-            ]
-            ++ extraExcludes;
-          includes = mkIncludes excludes inputs;
-        in {inherit excludes includes;};
-
-        preferDefaultModules = modules:
-          if modules ? default
-          then [modules.default]
-          else attrValues modules;
-
-        collectModules = type: includes: let
-          moduleAttr =
-            {
-              nixos = "nixosModules";
-              darwin = "darwinModules";
-              home = "homeModules";
-            }.${
-              type
-            };
-        in
-          if type == "home"
-          then
-            concatLists (
-              attrValues (
-                mapAttrs (
-                  _: input: let
-                    hasHome = input ? homeModules;
-                    mods =
-                      if hasHome
-                      then input.homeModules
-                      else input.homeManagerModules or {};
-                  in
-                    preferDefaultModules mods
-                )
-                includes
-              )
-            )
-          else
-            concatLists (
-              attrValues (
-                mapAttrs (
-                  _: input:
-                    optionals
-                    (input ? ${moduleAttr})
-                    (preferDefaultModules input.${moduleAttr})
-                )
-                includes
-              )
-            );
-      };
-    };
-
-    modules = let
-      inputs' = filterInputs [
-        #~@ Core infrastructure
-        "rust"
-        "treeFormatter"
-
-        #~@ Conditional
-        # "aiToolkit"
+      infrastructureInputs = [
+        "self"
+        "nixCore"
+        "nixLegacy"
+        "nixDarwin"
+        "nixEdge"
       ];
-      collect = group: collectModules group inputs'.includes;
-
-      config = {
-        nixpkgs.config = {inherit (defaults) allowUnfree;};
-      };
-
-      mkCore = type: let
-        nixos = collect "nixos" ++ [config];
-        darwin = collect "darwin" ++ [config];
-      in
-        if type == "nixos"
-        then nixos
-        else if type == "darwin"
-        then darwin
-        else throw "modules::mkCore := Unknown module type '${type}'";
-      home = collect "home";
-    in
-      inputs' // {inherit mkCore home;};
-
-    overlays = let
-      inputs' = filterInputs ["nixHM"];
-      available = filterAttrs (_: v: v != []) (
-        mapAttrs (
-          _: input:
-            optionals
-            (input ? overlays)
-            (preferDefaultModules input.overlays)
-        )
-        inputs'.includes
-      );
-      evaluated = concatLists (attrValues available);
-    in
-      inputs' // {inherit available evaluated;};
-
-    packages = defaults.nixpkgs.legacyPackages;
+    };
 
     args = import ./. {
-      flake = {
-        inherit defaults inputs lib libraries modules overlays packages self;
-      };
+      flake = {inherit defaults inputs self;};
     };
   in
     {inherit args;}

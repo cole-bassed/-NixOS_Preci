@@ -9,30 +9,33 @@
   exports = {
     scoped = {
       inherit
+        findFirst
+        getBySpec
         getOrderedOr
-        toOrdered
+        inspect
+        inspectJSON
+        isEmpty
+        isNotEmpty
         mapOrdered
-        parseOrdered
         mapParsedOrdered
         mergeUnique
-        orNull
         orDefault
         orEmpty
-        getBySpec
-        findFirst
+        orNull
+        parseOrdered
+        removeEmpty
         resolveBySpecs
-        removeNulls
+        toOrdered
         ;
-      dropNull = removeNulls;
+      dropNull = removeEmpty;
+      merge = mergeUnique;
       orderedOf = toOrdered;
       parsedOf = parseOrdered;
-      merge = mergeUnique;
-
-      isEmpty = isEmpty';
-      isNotEmpty = isNotEmpty';
     };
     global = {
-      removeNullAttrs = removeNulls;
+      inspectAttr = inspect;
+      inspectAttrJSON = inspectJSON;
+      removeEmptyAttrs = removeEmpty;
       orNullAttr = orNull;
       orDefaultAttr = orDefault;
       orEmptyAttr = orEmpty;
@@ -44,30 +47,29 @@
       getAttrBySpec = getBySpec;
       findFirstAttrs = findFirst;
       resolveAttrsBySpecs = resolveBySpecs;
-      isEmptyAttr = isEmpty';
-      isNotEmptyAttr = isNotEmpty';
+      isEmptyAttr = isEmpty;
+      isNotEmptyAttr = isNotEmpty;
     };
   };
 
   inherit (attrsets) attrNames filterAttrs hasAttr attrByPath getAttr listToAttrs mapAttrs optionalAttrs;
   inherit (lists) concatMap filter findFirstList foldl' genList isList length map nthOr;
-  inherit (strings) concatStringsSep;
+  inherit (strings) concatStringsSep toJSON;
   inherit (debug) withContext;
-  inherit (types) isAttrs isEmpty typeOf isString;
+  inherit (types) isAttrs typeOf isString isFunction' isPath;
 
-  isEmpty' = input: isAttrs input && input == {};
-  isNotEmpty' = input: isAttrs input && input != {};
-
-  removeNulls = sets: filterAttrs (n: v: v != null) sets;
+  isEmpty = input: (input == null) || (isAttrs input && input == {});
+  isNotEmpty = input: !isEmpty input;
+  removeEmpty = sets: filterAttrs (_: value: (isNotEmpty value)) sets;
 
   orNull = input:
     assert withContext {
       name = "attrsets.orNull";
-      assertion = isEmpty input || isAttrs input;
+      assertion = types.isEmpty input || isAttrs input;
       message = "expected an attrset, got ${typeOf input}";
       context = "evaluating attrsets.orNull";
     };
-      if isEmpty input || !(isAttrs input)
+      if types.isEmpty input || !(isAttrs input)
       then null
       else input;
 
@@ -78,7 +80,7 @@
       message = "expected attrsets, got default=${typeOf default} input=${typeOf input}";
       context = "evaluating attrsets.orDefault";
     };
-      if isNotEmpty' input
+      if isNotEmpty input
       then input
       else default;
 
@@ -89,7 +91,26 @@
       message = "expected an attrset or null, got ${typeOf input}";
       context = "evaluating attrsets.orEmpty";
     };
-      optionalAttrs (isNotEmpty' input) input;
+      optionalAttrs (isNotEmpty input) input;
+
+  inspect = level: let
+    fn = depth: value:
+      if depth <= 0
+      then "..."
+      else if isFunction' value
+      then "<function>"
+      else if isPath value
+      then "<path>"
+      else if isList value
+      then map (fn (depth - 1)) value
+      else if isAttrs value
+      then mapAttrs (_: fn (depth - 1)) value
+      else value;
+  in
+    fn level;
+
+  inspectJSON = level: value:
+    toJSON (inspect level value);
 
   getBySpec = input: spec:
     assert withContext {

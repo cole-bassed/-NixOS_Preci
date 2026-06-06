@@ -1,5 +1,6 @@
-{lib}:
-{
+{lib ? import <nixpkgs/lib>}:
+lib
+// {
   attrsets = {
     inherit
       (lib.attrsets)

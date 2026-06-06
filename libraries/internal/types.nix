@@ -6,14 +6,31 @@
   ...
 }: let
   exports = {
-    scoped = {};
-    global = {inherit isEmpty isNotEmpty isNull isNotNull;};
+    scoped = {inherit isFunction';};
+    global = {
+      inherit
+        isEmpty
+        isNotEmpty
+        isFunction'
+        isNull
+        isNotNull
+        ;
+      isFunctionSafe = isFunction';
+    };
   };
 
   inherit (debug) withContext;
   inherit (lists) head tail isList optionals reverseList;
   inherit (strings) concatStrings stringLength stringToCharacters;
-  inherit (types) isAttrs isFunction isString;
+  inherit (types) isAttrs isString;
+  inherit (builtins) isFunction tryEval;
+
+  isFunction' = value:
+    isFunction value
+    || (
+      value ? __functor
+      && (tryEval (isFunction (value.__functor value))).value
+    );
 
   # Minimal local trim so predicates doesn't circularly depend on strings.
   trim = s: let
