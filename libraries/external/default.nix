@@ -61,21 +61,39 @@
 
   libraries = let
     classified = mapAttrs (_: input: input.lib) inputs'.classified.libraries;
-    # normalized = mapAttrs (_: input: input.lib) inputs'.normalized;
     normalized = mapAttrs (_: input: input.lib) (
       filterAttrs (_: v: v != null) inputs'.normalized
     );
-    nixpkgs = import ./nixpkgs.nix normalized.nixpkgs;
-  in (
+    nixpkgs =
+      if inputs'.normalized.nixpkgs != null
+      then import ./nixpkgs.nix inputs'.normalized.nixpkgs
+      else {};
+  in
     bootstrap
     // nixpkgs
     // classified
     // normalized
     // {inherit bootstrap nixpkgs;}
-    // asAttrsIf (normalized.treefmt != null) {
-      treefmt = normalized.treefmt // {inherit root;};
+    // asAttrsIf (isFlakeLike inputs') {
+      flakes = {
+        inputs = inputs';
+        inherit modules overlays packages;
+        treefmt = inputs'.normalized.treefmt;
+        nixpkgs = inputs'.normalized.nixpkgs;
+        darwin = inputs'.normalized.nix-darwin;
+        home-manager = inputs'.normalized.home-manager;
+      };
     }
-  );
+    // (
+      asAttrsIf (inputs'.normalized.treefmt != null) {
+        treefmt =
+          inputs'.normalized.treefmt.lib
+          // {
+            inherit root;
+            flake = inputs'.normalized.treefmt;
+          };
+      }
+    );
 
   modules = let
     collect = type: collectModules type inputs'.classified.modules;
@@ -91,9 +109,7 @@
   overlays = let
     all = filterAttrs (_: value: value != {}) (mapAttrs (
         _: input:
-          if input ? overlays
-          then input.overlays
-          else {}
+          input.overlays or {}
       )
       inputs'.classified.overlays);
   in {
@@ -114,7 +130,13 @@ in
   asAttrsIf (isFlakeLike inputs') {
     flake = {
       inputs = inputs';
-      inherit libraries modules overlays packages;
+      inherit modules overlays packages libraries;
+      treefmt = asAttrsIf (inputs'.normalized.treefmt != null) (
+        inputs'.normalized.treefmt.lib // {inherit root;}
+      );
+      nixpkgs = inputs'.normalized.nixpkgs;
+      darwin = inputs'.normalized.nix-darwin;
+      home-manager = inputs'.normalized.home-manager;
     };
   }
   // libraries

@@ -110,7 +110,7 @@
       if isFunction arg
       then {fn = arg;}
       else arg;
-    packages = opts.packages or flakes.packages;
+    packages = opts.packages or flakes.packages.default;
     extra = opts.extra or [];
   in
     genAttrs

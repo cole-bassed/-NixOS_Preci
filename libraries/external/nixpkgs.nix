@@ -1,8 +1,6 @@
 nixpkgs: let
   lib =
-    if nixpkgs ? lib
-    then nixpkgs
-    else (import <nixpkgs/lib>);
+    nixpkgs.lib or (import <nixpkgs/lib>);
 in
   lib
   // {

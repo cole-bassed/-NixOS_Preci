@@ -1,7 +1,7 @@
 {
   defaults,
   lib,
-  external,
+  # external,
   name ? names.lib,
   names,
   paths,

@@ -1,6 +1,5 @@
 # flake: let
 #   inherit (flake.libraries.modules) importModules;
-
 #   core =
 #     (flake.modules.core or [])
 #     ++ [
@@ -22,3 +21,4 @@
 #     inherit flake;
 #     # flake = flake // {modules = flake.modules // {inherit core;};};
 #   }
+{}
