@@ -69,15 +69,15 @@
     };
 
     #~@ UI/UX:= shells, launchers, styling
-    # shellCaelestia = {
-    #   repo = "shell";
-    #   owner = "caelestia-dots";
-    #   type = "github";
-    #   inputs = {
-    #     nixpkgs.follows = "nixCore";
-    #     quickshell.follows = "shellQuick";
-    #   };
-    # };
+    shellCaelestia = {
+      repo = "shell";
+      owner = "caelestia-dots";
+      type = "github";
+      inputs = {
+        nixpkgs.follows = "nixCore";
+        quickshell.follows = "shellQuick";
+      };
+    };
     shellDankMaterial = {
       # ref = "stable";
       repo = "DankMaterialShell";
@@ -124,10 +124,20 @@
   };
 
   outputs = inputs: let
+    infrastructure = [
+      "nixCore"
+      "nixLegacy"
+      "nixDarwin"
+      "nixEdge"
+    ];
     root = ./.;
     defaults = {
       allowUnfree = true;
       nixpkgs = inputs.nixCore;
+      excludes = {
+        modules = infrastructure ++ ["treeFormatter" "treefmt"];
+        overlays = infrastructure ++ ["nixHM" "home-manager"];
+      };
     };
 
     args = import ./. {flake = {inherit defaults inputs root;};};

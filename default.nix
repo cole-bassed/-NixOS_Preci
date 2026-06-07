@@ -43,11 +43,7 @@
         else "ExampleHost";
       # ───────────────────────────────────────────────────────────────────────
 
-      # host = "example";
-      # host = "ExampleHost";
-      # host = "Preci";
-
-      excludes = [
+      excludes.paths = [
         "archive"
         "backup"
         "review"

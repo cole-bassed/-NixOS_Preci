@@ -13,6 +13,7 @@
     attrValues
     collectModules
     concatLists
+    elem
     filterAttrs
     hasLib
     hasModules
@@ -36,24 +37,24 @@
       nixpkgs = filterAttrs (_: isNixpkgsLike) raw;
       nix-darwin = filterAttrs (_: isNixDarwinLike) raw;
       home-manager = filterAttrs (_: isHomeManagerLike) raw;
-      modules =
-        filterAttrs
-        (
-          name: input:
-            hasModules input
-            && !(isNixpkgsLike input)
-            # ── CRITICAL FILTER: DO NOT AUTOMATICALLY COLLECT OURSELVES ────────────
-            && name != "self"
-            && name != names.src # e.g., "dots"
-            && name != names.top
-          # ───────────────────────────────────────────────────────────────────────
-        )
-        raw;
-
       # modules =
       #   filterAttrs
-      #   (_: input: hasModules input && !(isNixpkgsLike input))
+      #   (
+      #     name: input:
+      #       hasModules input
+      #       && !(isNixpkgsLike input)
+      #       # ── CRITICAL FILTER: DO NOT AUTOMATICALLY COLLECT OURSELVES ────────────
+      #       && name != "self"
+      #       && name != names.src # e.g., "dots"
+      #       && name != names.top
+      #     # ───────────────────────────────────────────────────────────────────────
+      #   )
       #   raw;
+
+      modules =
+        filterAttrs
+        (_: input: hasModules input && !(isNixpkgsLike input))
+        raw;
       overlays = filterAttrs (_: hasOverlays) raw;
       packages =
         filterAttrs
@@ -112,27 +113,23 @@
       }
     );
 
+  # Wrap the final modules output to drop names defined in your defaults testing toggles
   modules = let
-    collect = type: collectModules type inputs'.classified.modules;
+    excludes = defaults.excludes.modules or [];
 
-    # Map our system types to home-manager's respective internal module keys
-    hmModuleKey = type:
-      if type == "nixos"
-      then "nixosModules"
-      else if type == "darwin"
-      then "darwinModules"
-      else null;
+    # Filter the raw classified modules map list before mkCore/home process them
+    filteredModules =
+      filterAttrs
+      (name: _: !(elem name excludes))
+      inputs'.classified.modules;
+
+    collect = type: collectModules type filteredModules;
   in {
-    mkCore = type: let
-      hmKey = hmModuleKey type;
-      hmInput = inputs'.normalized.home-manager;
-    in
+    inherit excludes;
+    mkCore = type:
       if type == "nixos" || type == "darwin"
       then
         collect type
-        ++ asListIf
-        (hmKey != null && hmInput != null && hmInput ? ${hmKey}.home-manager)
-        hmInput.${hmKey}.home-manager
         ++ [{nixpkgs.config = {inherit (defaults) allowUnfree;};}]
       else throw "modules::mkCore:= unknown type '${type}'";
 
@@ -140,15 +137,60 @@
   };
 
   overlays = let
+    excludes = defaults.excludes.overlays or [];
+
+    filteredOverlayInputs =
+      filterAttrs
+      (name: _: !(elem name excludes))
+      inputs'.classified.overlays;
+
     all = filterAttrs (_: value: value != {}) (mapAttrs (
         _: input:
           input.overlays or {}
       )
-      inputs'.classified.overlays);
+      filteredOverlayInputs);
   in {
-    inherit all;
+    inherit all excludes;
     default = concatLists (map attrValues (attrValues all));
   };
+
+  # modules = let
+  #   collect = type: collectModules type inputs'.classified.modules;
+
+  #   # Map our system types to home-manager's respective internal module keys
+  #   hmModuleKey = type:
+  #     if type == "nixos"
+  #     then "nixosModules"
+  #     else if type == "darwin"
+  #     then "darwinModules"
+  #     else null;
+  # in {
+  #   mkCore = type: let
+  #     hmKey = hmModuleKey type;
+  #     hmInput = inputs'.normalized.home-manager;
+  #   in
+  #     if type == "nixos" || type == "darwin"
+  #     then
+  #       collect type
+  #       ++ asListIf
+  #       (hmKey != null && hmInput != null && hmInput ? ${hmKey}.home-manager)
+  #       hmInput.${hmKey}.home-manager
+  #       ++ [{nixpkgs.config = {inherit (defaults) allowUnfree;};}]
+  #     else throw "modules::mkCore:= unknown type '${type}'";
+
+  #   home = collect "home";
+  # };
+
+  # overlays = let
+  #   all = filterAttrs (_: value: value != {}) (mapAttrs (
+  #       _: input:
+  #         input.overlays or {}
+  #     )
+  #     inputs'.classified.overlays);
+  # in {
+  #   inherit all;
+  #   default = concatLists (map attrValues (attrValues all));
+  # };
 
   packages = let
     classified = mapAttrs (_: input: input.legacyPackages or {}) inputs'.classified.nixpkgs;
