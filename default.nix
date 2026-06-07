@@ -73,6 +73,7 @@ in
   libraries.orEmptyAttrs libraries.flake
   // libraries.mkDots paths api.hosts.${defaults.host}
   // {
-    inherit api defaults libraries names paths;
+    inherit api defaults libraries names bootstrap paths;
+    inspect = bootstrap.inspectAttrs;
     "${names.lib}" = libraries;
   }

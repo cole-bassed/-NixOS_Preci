@@ -37,24 +37,23 @@
       nixpkgs = filterAttrs (_: isNixpkgsLike) raw;
       nix-darwin = filterAttrs (_: isNixDarwinLike) raw;
       home-manager = filterAttrs (_: isHomeManagerLike) raw;
-      # modules =
-      #   filterAttrs
-      #   (
-      #     name: input:
-      #       hasModules input
-      #       && !(isNixpkgsLike input)
-      #       # ── CRITICAL FILTER: DO NOT AUTOMATICALLY COLLECT OURSELVES ────────────
-      #       && name != "self"
-      #       && name != names.src # e.g., "dots"
-      #       && name != names.top
-      #     # ───────────────────────────────────────────────────────────────────────
-      #   )
-      #   raw;
-
       modules =
         filterAttrs
-        (_: input: hasModules input && !(isNixpkgsLike input))
+        (
+          name: input:
+            hasModules input
+            && !(isNixpkgsLike input)
+            && name != "self"
+            && name != names.src
+            && name != names.top
+        )
         raw;
+
+      # modules =
+      #   filterAttrs
+      #   (_: input: hasModules input && !(isNixpkgsLike input))
+      #   raw;
+
       overlays = filterAttrs (_: hasOverlays) raw;
       packages =
         filterAttrs
@@ -73,7 +72,7 @@
       home-manager = pickFirst classified.home-manager;
       treefmt = pickFirst (
         filterAttrs (_: isTreefmtLike) raw
-      );
+      ); # TODO: This is where we should inject root into the lib
     };
   in {inherit raw classified normalized;};
 
@@ -113,45 +112,6 @@
       }
     );
 
-  modules = let
-    excludes = defaults.excludes.modules or [];
-
-    filteredModules =
-      filterAttrs
-      (name: _: !(elem name excludes))
-      inputs'.classified.modules;
-
-    collect = type: collectModules type filteredModules;
-  in {
-    inherit excludes;
-    mkCore = type:
-      if type == "nixos" || type == "darwin"
-      then
-        collect type
-        ++ [{nixpkgs.config = {inherit (defaults) allowUnfree;};}]
-      else throw "modules::mkCore:= unknown type '${type}'";
-
-    home = collect "home";
-  };
-
-  overlays = let
-    excludes = defaults.excludes.overlays or [];
-
-    filteredOverlayInputs =
-      filterAttrs
-      (name: _: !(elem name excludes))
-      inputs'.classified.overlays;
-
-    all = filterAttrs (_: value: value != {}) (mapAttrs (
-        _: input:
-          input.overlays or {}
-      )
-      filteredOverlayInputs);
-  in {
-    inherit all excludes;
-    default = concatLists (map attrValues (attrValues all));
-  };
-
   # modules = let
   #   collect = type: collectModules type inputs'.classified.modules;
 
@@ -179,6 +139,64 @@
   #   home = collect "home";
   # };
 
+  modules = let
+    # Safe lookup for your configurable external tester excludes
+    excludes = defaults.excludes.modules or [];
+
+    # Filter your auto-discovered inputs before mkCore processes them
+    filteredModules =
+      filterAttrs
+      (name: _: !(elem name excludes))
+      inputs'.classified.modules;
+
+    collect = type: collectModules type filteredModules;
+
+    # Dynamically compute home-manager's internal target module keys
+    hmModuleKey = type:
+      if type == "nixos"
+      then "nixosModules"
+      else if type == "darwin"
+      then "darwinModules"
+      else null;
+  in {
+    inherit excludes;
+
+    mkCore = type: let
+      hmKey = hmModuleKey type;
+      hmInput = inputs'.normalized.home-manager;
+    in
+      if type == "nixos" || type == "darwin"
+      then
+        collect type
+        # ── RE-INJECT HOME-MANAGER NATIVE LAYER NATIVELY ─────────────────────
+        ++ asListIf
+        (hmKey != null && hmInput != null && hmInput ? ${hmKey}.home-manager)
+        hmInput.${hmKey}.home-manager
+        # ─────────────────────────────────────────────────────────────────────
+        ++ [{nixpkgs.config = {inherit (defaults) allowUnfree;};}]
+      else throw "modules::mkCore:= unknown type '${type}'";
+
+    home = collect "home";
+  };
+
+  overlays = let
+    excludes = defaults.excludes.overlays or [];
+
+    filteredOverlayInputs =
+      filterAttrs
+      (name: _: !(elem name excludes))
+      inputs'.classified.overlays;
+
+    all = filterAttrs (_: value: value != {}) (mapAttrs (
+        _: input:
+          input.overlays or {}
+      )
+      filteredOverlayInputs);
+  in {
+    inherit all excludes;
+    default = concatLists (map attrValues (attrValues all));
+  };
+
   # overlays = let
   #   all = filterAttrs (_: value: value != {}) (mapAttrs (
   #       _: input:
@@ -200,19 +218,14 @@
     default = normalized.nixpkgs;
   in {inherit default all classified normalized;};
 in
-  asAttrsIf (isFlakeLike inputs') {
-    flake = {
-      inherit modules overlays packages libraries;
-      name = names.src;
-      path = paths.src;
-      inputs = inputs';
-
-      # treefmt = asAttrsIf (inputs'.normalized.treefmt != null) (
-      #   inputs'.normalized.treefmt.lib // {inherit root;}
-      # );
-      # nixpkgs = inputs'.normalized.nixpkgs;
-      # darwin = inputs'.normalized.nix-darwin;
-      # home-manager = inputs'.normalized.home-manager;
-    };
-  }
-  // libraries
+  libraries
+  // (
+    asAttrsIf (isFlakeLike inputs') {
+      flake = {
+        inherit modules overlays packages libraries;
+        name = names.src;
+        path = paths.src;
+        inputs = inputs';
+      };
+    }
+  )
