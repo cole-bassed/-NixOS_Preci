@@ -766,7 +766,9 @@ let
   ```
   */
   isNixpkgsLike = input:
-    input ? legacyPackages && input ? lib;
+    input ? legacyPackages
+    && input ? lib
+    && !(input ? __functor);
 
   isNixDarwinLike = input:
     input ? darwinModules

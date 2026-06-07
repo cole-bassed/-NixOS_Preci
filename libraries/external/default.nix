@@ -89,7 +89,7 @@
   };
 
   overlays = let
-    available = filterAttrs (_: value: value != {}) (mapAttrs (
+    all = filterAttrs (_: value: value != {}) (mapAttrs (
         _: input:
           if input ? overlays
           then input.overlays
@@ -97,17 +97,19 @@
       )
       inputs'.classified.overlays);
   in {
-    inherit available;
-    evaluated = concatLists (map attrValues (attrValues available));
+    inherit all;
+    default = concatLists (map attrValues (attrValues all));
   };
 
-  packages = {
+  packages = let
     classified = mapAttrs (_: input: input.legacyPackages or {}) inputs'.classified.nixpkgs;
     normalized = {
       nixpkgs = inputs'.normalized.nixpkgs.legacyPackages or {};
       home-manager = inputs'.normalized.home-manager.legacyPackages or {};
     };
-  };
+    all = classified // normalized;
+    default = normalized.nixpkgs;
+  in {inherit default all classified normalized;};
 in
   asAttrsIf (isFlakeLike inputs') {
     flake = {
