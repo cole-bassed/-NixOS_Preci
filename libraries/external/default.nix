@@ -38,8 +38,22 @@
       home-manager = filterAttrs (_: isHomeManagerLike) raw;
       modules =
         filterAttrs
-        (_: input: hasModules input && !(isNixpkgsLike input))
+        (
+          name: input:
+            hasModules input
+            && !(isNixpkgsLike input)
+            # ── CRITICAL FILTER: DO NOT AUTOMATICALLY COLLECT OURSELVES ────────────
+            && name != "self"
+            && name != names.src # e.g., "dots"
+            && name != names.top
+          # ───────────────────────────────────────────────────────────────────────
+        )
         raw;
+
+      # modules =
+      #   filterAttrs
+      #   (_: input: hasModules input && !(isNixpkgsLike input))
+      #   raw;
       overlays = filterAttrs (_: hasOverlays) raw;
       packages =
         filterAttrs

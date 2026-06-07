@@ -923,6 +923,17 @@ let
   ```
   */
   collectModules = type: modules: let
+    # Bring in standard unique list filter to discard duplicate file targets
+    unique =
+      builtins.createSymbols or (items: let
+        # Fallback unique filter logic if lib isn't inherited here yet
+        dedup = list:
+          if list == []
+          then []
+          else [(builtins.head list)] ++ dedup (builtins.filter (x: x != builtins.head list) (builtins.tail list));
+      in
+        dedup items);
+
     moduleAttr =
       if type == "nixos"
       then "nixosModules"
@@ -931,35 +942,80 @@ let
       else if type == "home"
       then "homeModules"
       else throw "collectModules:= unsupported type '${type}'";
+
+    # Store the raw aggregated results
+    rawCollected =
+      if type == "home"
+      then
+        concatLists (
+          attrValues (
+            mapAttrs (
+              _: input: let
+                mods =
+                  if hasAttr "homeModules" input
+                  then input.homeModules
+                  else (input.homeManagerModules or {});
+              in
+                preferDefaultModules mods
+            )
+            modules
+          )
+        )
+      else
+        concatLists (
+          attrValues (
+            mapAttrs (
+              _: input:
+                asListIf
+                (hasAttr moduleAttr input)
+                (preferDefaultModules (getAttr moduleAttr input))
+            )
+            modules
+          )
+        );
   in
-    if type == "home"
-    then
-      concatLists (
-        attrValues (
-          mapAttrs (
-            _: input: let
-              mods =
-                if hasAttr "homeModules" input
-                then input.homeModules
-                else (input.homeManagerModules or {});
-            in
-              preferDefaultModules mods
-          )
-          modules
-        )
-      )
-    else
-      concatLists (
-        attrValues (
-          mapAttrs (
-            _: input:
-              asListIf
-              (hasAttr moduleAttr input)
-              (preferDefaultModules (getAttr moduleAttr input))
-          )
-          modules
-        )
-      );
+    # ── CRITICAL FIX: DEDUPLICATE COLLECTED FILE PATHS ──────────────────────
+    # Ensures no module path or file object is added to the system list twice
+    unique rawCollected;
+
+  # collectModules = type: modules: let
+  #   moduleAttr =
+  #     if type == "nixos"
+  #     then "nixosModules"
+  #     else if type == "darwin"
+  #     then "darwinModules"
+  #     else if type == "home"
+  #     then "homeModules"
+  #     else throw "collectModules:= unsupported type '${type}'";
+  # in
+  #   if type == "home"
+  #   then
+  #     concatLists (
+  #       attrValues (
+  #         mapAttrs (
+  #           _: input: let
+  #             mods =
+  #               if hasAttr "homeModules" input
+  #               then input.homeModules
+  #               else (input.homeManagerModules or {});
+  #           in
+  #             preferDefaultModules mods
+  #         )
+  #         modules
+  #       )
+  #     )
+  #   else
+  #     concatLists (
+  #       attrValues (
+  #         mapAttrs (
+  #           _: input:
+  #             asListIf
+  #             (hasAttr moduleAttr input)
+  #             (preferDefaultModules (getAttr moduleAttr input))
+  #         )
+  #         modules
+  #       )
+  #     );
 
   pickFirst = attrs:
     if attrs == {}
