@@ -9,9 +9,6 @@
 #     base = ./.;
 #     includeFiles = true;
 #   })
-flake:
-flake.libraries.modules.importModules {
-  base = ./.;
-  args = flake;
-  includeFiles = true;
+{
+  imports = [./localization.nix];
 }

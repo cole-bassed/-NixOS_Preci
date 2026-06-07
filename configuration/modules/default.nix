@@ -16,13 +16,16 @@
 # groupHome = groups: concatMap (group: group.home-manager.sharedModules or []) groups;
 {libraries, ...} @ base:
 libraries.assemble.configurations base {
-  # modules = ./modules/base;
-  # modules.core = [
+  # modules = {
+  #   core = [./localization.nix];
+  #   home = [];
+  # };
+  # modules = [
   #   ({host, ...}: {
-  #     system.stateVersion = host.stateVersion or null;
+  #     system.stateVersion = host.stateVersion 22.11;
   #     # config.system.stateVersion = config.system.nixos.release;
   #   })
-  # ]
+  # ];
   # ++ groupImports (modules.imports or []) ++ (secrets.imports or []);
 
   # modules.home =

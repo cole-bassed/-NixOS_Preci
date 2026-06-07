@@ -190,42 +190,51 @@
               ++ (host.modules or [])
               ++ (host.imports or [])
               ++ (extraArgs.modules.core or [])
+              ++ (base.modules.core or [])
+              ++ (args.modules.core or [])
               ++ [
-                {
-                  home-manager = {
-                    backupFileExtension = "backup";
-                    useGlobalPkgs = true;
-                    useUserPackages = true;
-                    sharedModules = extraArgs.modules.home or [];
+                (import ../../configuration/modules/base/localization.nix)
+                ({host, ...}: {
+                  system.stateVersion = host.stateVersion or "22.11";
+                  # config.system.stateVersion = config.system.nixos.release;
+                })
+              ]
+              ++ [
+                # {
+                #   home-manager = {
+                #     backupFileExtension = "backup";
+                #     useGlobalPkgs = true;
+                #     useUserPackages = true;
+                #     sharedModules = extraArgs.modules.home or [];
 
-                    extraSpecialArgs =
-                      specialArgs
-                      // {
-                        flakeModules = flake.modules.home;
-                      };
-                    users =
-                      mapAttrs
-                      (_: user: {
-                        config,
-                        osConfig,
-                        ...
-                      }: {
-                        imports =
-                          [
-                            {
-                              home = {
-                                inherit (osConfig.system) stateVersion;
-                                sessionVariables = mkEnvVars "" (config.${top}.paths or {});
-                                shellAliases = mkCdAliases (config.${top}.paths or {});
-                              };
-                              programs.home-manager.enable = true;
-                            }
-                          ]
-                          ++ [];
-                      })
-                      (host.users.byStatus.enabled.values or {});
-                  };
-                }
+                #     extraSpecialArgs =
+                #       specialArgs
+                #       // {
+                #         flakeModules = flake.modules.home;
+                #       };
+                #     users =
+                #       mapAttrs
+                #       (_: user: {
+                #         config,
+                #         osConfig,
+                #         ...
+                #       }: {
+                #         imports =
+                #           [
+                #             {
+                #               home = {
+                #                 inherit (osConfig.system) stateVersion;
+                #                 sessionVariables = mkEnvVars "" (config.${top}.paths or {});
+                #                 shellAliases = mkCdAliases (config.${top}.paths or {});
+                #               };
+                #               programs.home-manager.enable = true;
+                #             }
+                #           ]
+                #           ++ [];
+                #       })
+                #       (host.users.byStatus.enabled.values or {});
+                #   };
+                # }
               ];
 
             # modules =
