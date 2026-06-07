@@ -20,26 +20,7 @@
 
   defaults =
     {
-      host = {
-        name = "nixos";
-        id = null;
-        description = null;
-        type = null;
-        class = "nixos";
-        system = "x86_64-linux";
-        stateVersion = null; # ? Must be the same as when the OS was installed
-        paths.src = "/etc/nixos";
-
-        localization = {
-          latitude = 18.015;
-          longitude = -77.49;
-          locator = "manual";
-          city = "Mandeville/Jamaica";
-          timezone = "America/Jamaica";
-          locale = "en_US.UTF-8";
-        };
-      };
-
+      host = "ExampleHost";
       excludes = [
         "archive"
         "backup"
@@ -58,11 +39,11 @@
     inherit defaults paths names;
     inherit (flake) inputs root;
   };
+  inherit (libraries) api;
 in
   libraries.orEmptyAttrs libraries.flake
+  // libraries.mkDots paths api.hosts.${defaults.host}
   // {
-    dots = toString paths.src;
-    # inputs = flake.inputs or {};
-    inherit defaults libraries names paths;
+    inherit api defaults libraries names paths;
     "${names.lib}" = libraries;
   }

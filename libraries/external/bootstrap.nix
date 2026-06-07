@@ -20,6 +20,7 @@ let
         isNixpkgsInfrastructure
         isNixpkgsLike
         isTreefmtLike
+        mkDots
         orEmptyAttrs
         orEmptyList
         orEmptyString
@@ -48,6 +49,13 @@ let
     stringLength
     typeOf
     ;
+
+  mkDots = paths: host: {
+    dots = {
+      store = toString paths.src;
+      local = host.paths.src or (throw "mkDots:= Host must define 'paths.src' as the local path to the flake");
+    };
+  };
 
   /**
   Trim leading and trailing whitespace from a string.

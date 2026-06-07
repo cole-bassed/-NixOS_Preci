@@ -9,7 +9,7 @@
   system = "x86_64-linux";
   stateVersion = "25.11";
 
-  # paths.flake.local = "/home/craole/.dots";
+  paths.src = "/home/craole/.dots";
 
   # localization = {
   #   latitude = 18.015;

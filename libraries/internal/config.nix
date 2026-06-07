@@ -37,6 +37,7 @@
   inherit (modules) mkCdAliases mkEnvVars;
   inherit (types) isAttrs isBool isFunction isNotEmpty typeOf;
   inherit (api) hosts;
+  defaultHost = api.hosts.${defaults.host};
 
   # ── systems ────────────────────────────────────────────────────────────────
 
@@ -99,7 +100,7 @@
   supportedSystems = {extra ? []}:
     unique (
       extra
-      ++ map (host: host.system or host.platform or defaults.host.system)
+      ++ map (host: host.system or host.platform or defaultHost.system)
       (attrValues hosts)
     );
 
@@ -165,8 +166,8 @@
       resolved =
         mapAttrs (
           _: spec: let
-            host = recursiveUpdate defaults.host spec;
-            class = host.class or defaults.host.class;
+            host = recursiveUpdate defaultHost spec;
+            class = host.class or defaultHost.class;
             specialArgs =
               {inherit top host;}
               // (removeAttrs extraArgs ["lib" "modules" "packages"])
