@@ -1,15 +1,10 @@
 {
   bootstrap ? import ../bootstrap,
-  flake ? {
-    defaults = {allowUnfree = true;};
-    name = "dots";
-    path = ../../.;
-    inputs = {};
-  },
+  flake ? {},
 }: let
   inherit (bootstrap.config) collect preferDefault getPackages;
   inherit (bootstrap.lists) asListIf concat elem;
-  inherit (bootstrap.attrsets) asIf filter firstOf maps orEmpty update valuesOf;
+  inherit (bootstrap.attrsets) asIf filter firstOf isAttrs maps orEmpty update valuesOf;
   inherit
     (bootstrap.types)
     hasLib
@@ -24,13 +19,15 @@
     isTreefmtLike
     ;
 
-  inherit (flake) defaults name path;
+  defaults = update {allowUnfree = true;} (flake.defaults or {});
+  name = flake.name or "dots";
+  path = flake.path or ../../.;
 
   inputs = let
     raw =
       filter
-      (input: _: !(elem input ["self" (orEmpty flake.name)]))
-      (orEmpty flake.inputs);
+      (input: _: !(elem input ["self" name]))
+      (flake.inputs or {});
 
     classified = {
       nixpkgs = filter (_: isNixpkgsLike) raw;
@@ -77,7 +74,9 @@
       home-manager = firstOf classified.home-manager;
       treefmt = firstOf classified.treefmt;
     };
-  in {inherit raw classified normalized;};
+
+    merged = classified // normalized;
+  in {inherit raw classified normalized merged;};
 
   libraries = let
     classified = (
@@ -85,6 +84,8 @@
       (_: input: input.lib)
       inputs.classified.libraries
     );
+
+    treefmt = orEmpty inputs.normalized.treefmt;
 
     normalized =
       (
@@ -102,16 +103,15 @@
       }
       // (
         asIf
-        (inputs ? normalized.treefmt.lib)
-        {treefmt = inputs.normalized.treefmt.lib // {inherit path;};}
+        (treefmt?lib)
+        {treefmt = treefmt.lib // {inherit path;};}
       );
 
-    merged = update classified normalized;
-    default =
+    merged =
       normalized.nixpkgs
       // classified
       // normalized;
-  in {inherit classified normalized merged default;};
+  in {inherit classified normalized merged;};
 
   modules = let
     excludes = defaults.excludes.modules or [];
@@ -131,7 +131,7 @@
 
     normalized = {
       home-manager = type: let
-        key = type:
+        key =
           if type == "nixos"
           then "nixosModules"
           else if type == "darwin"
@@ -141,12 +141,14 @@
       in
         asListIf
         (
-          (isNotEmpty key)
-          && (isNotEmpty input) #TODO: We shoouldn't need this, `?` does this
+          (key != null)
+          && (isAttrs input)
           && input ? ${key}.home-manager
         )
         input.${key}.home-manager;
     };
+
+    merged = classified // normalized;
 
     mkCore = type:
       if type == "nixos" || type == "darwin"
@@ -155,11 +157,7 @@
         ++ normalized.home-manager type
         ++ [{nixpkgs.config = {inherit (defaults) allowUnfree;};}]
       else throw "external.modules.mkCore: unknown type '${type}'";
-  in
-    {
-      inherit raw classified normalized excludes mkCore;
-    }
-    // classified;
+  in {inherit raw classified normalized excludes merged mkCore;};
 
   overlays = let
     excludes = defaults.excludes.overlays or [];
@@ -178,11 +176,9 @@
   in {
     inherit raw classified normalized excludes;
 
-    all = classified // normalized;
-
-    default =
+    merged =
       concat
-      (map preferDefault (valuesOf classified));
+      (map preferDefault (valuesOf (classified // normalized)));
   };
 
   packages = let
@@ -203,11 +199,11 @@
   in {
     inherit raw classified normalized;
 
-    all = classified // normalized;
+    merged = classified // normalized;
     default = orEmpty normalized.nixpkgs;
   };
 in
-  libraries.default
+  libraries.merged
   // asIf (isFlakeLike inputs) {
     ${name} = {
       inherit

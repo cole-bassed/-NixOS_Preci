@@ -10,10 +10,11 @@
   },
   paths ? {src = ../.;},
 }: let
+  inherit (bootstrap.attrsets) update;
   external = import ./external {
     inherit bootstrap;
     flake =
-      bootstrap.recursiveUpdate {
+      update {
         name = names.src;
         path = paths.src;
       }
@@ -22,4 +23,4 @@
   internal = import ./internal {inherit bootstrap external names defaults paths name;};
 in
   {inherit bootstrap external internal;}
-  // bootstrap.attrsets.update external internal
+  // update external internal

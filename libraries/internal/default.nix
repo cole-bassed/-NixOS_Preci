@@ -1,10 +1,31 @@
 {
-  bootstrap,
-  defaults,
-  external,
-  name,
-  names,
-  paths,
+  bootstrap ? import ../bootstrap,
+  external ? import ../external {},
+  defaults ? {
+    host = "ExampleHost";
+    excludes = {
+      paths = [
+        "archive"
+        "backup"
+        "review"
+        "temp"
+
+        "default.nix"
+        "flake.nix"
+      ];
+    };
+    tags = ["core" "home"];
+  },
+  name ? names.lib,
+  names ? {
+    src = "dots";
+    top = "dots";
+    lib = "lix";
+  },
+  paths ? {
+    src = ../../.;
+    api = ../../configuration/api;
+  },
   ...
 }: let
   inherit (bootstrap) getAttrs inheritAttr mapAttrs recursiveUpdate;

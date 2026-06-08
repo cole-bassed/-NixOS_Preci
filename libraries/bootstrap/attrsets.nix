@@ -35,7 +35,7 @@ let
       inheritAttr = orEmpty';
       inspectAttrs = inspect;
       orEmptyAttrs = orEmpty;
-      recursiveUpdate' = update;
+      recursiveUpdate = update;
     };
   };
 

@@ -25,7 +25,7 @@
   };
 
   bootstrap = import paths.bootstrap;
-  inherit (bootstrap.attrsets) inspect orEmpty update;
+  inherit (bootstrap.attrsets) is inspect orEmpty update;
   inherit (bootstrap.config) getEnv mkDots;
 
   defaults = let
@@ -39,7 +39,7 @@
         envHost = getEnv "HOSTNAME";
         envName = getEnv "NAME";
       in
-        if flake ? currentHost && flake.currentHost != ""
+        if is flake && (flake.currentHost or "") != ""
         then flake.currentHost
         else if envHost != ""
         then envHost
@@ -63,7 +63,7 @@
       tags = ["core" "home"];
     };
   in
-    update base (flake.defaults or {});
+    update base (orEmpty flake.defaults);
 
   libraries =
     import paths.libraries {
