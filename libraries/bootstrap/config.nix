@@ -2,6 +2,9 @@ let
   exports = {
     scoped = {
       inherit mkDots;
+      inherit (builtins) getEnv;
+      inherit ((import ./modules.nix).scoped) collect preferDefault;
+      inherit ((import ./packages.nix).global) getPackages;
     };
 
     global = {

@@ -1,4 +1,5 @@
 {
+  bootstrap,
   defaults,
   external,
   name,
@@ -6,13 +7,7 @@
   paths,
   ...
 }: let
-  inherit
-    (external)
-    getAttrs
-    inheritAttr
-    mapAttrs
-    recursiveUpdate
-    ;
+  inherit (bootstrap) getAttrs inheritAttr mapAttrs recursiveUpdate;
 
   scoped =
     mapAttrs

@@ -1,21 +1,17 @@
 {
-  bootstrap,
-  defaults,
-  inputs,
-  names,
-  paths,
-  root,
+  bootstrap ? import ../bootstrap,
+  flake ? {
+    defaults = {allowUnfree = true;};
+    name = "dots";
+    path = ../../.;
+    inputs = {};
+  },
 }: let
+  inherit (bootstrap.config) collect preferDefault getPackages;
+  inherit (bootstrap.lists) asListIf concat elem;
+  inherit (bootstrap.attrsets) asIf filter firstOf maps orEmpty update valuesOf;
   inherit
-    (bootstrap)
-    asAttrsIf
-    asListIf
-    attrValues
-    collectModules
-    concatLists
-    elem
-    filterAttrs
-    getPackages
+    (bootstrap.types)
     hasLib
     hasModules
     hasOverlays
@@ -26,98 +22,93 @@
     isNixpkgsLike
     isNotEmpty
     isTreefmtLike
-    mapAttrs
-    preferDefaultModules
-    orEmptyAttrs
-    pickFirst
     ;
 
-  inputs' = let
+  inherit (flake) defaults name path;
+
+  inputs = let
     raw =
-      filterAttrs
-      (input: _: !(elem input ["self" names.src names.top]))
-      (orEmptyAttrs inputs);
+      filter
+      (input: _: !(elem input ["self" (orEmpty flake.name)]))
+      (orEmpty flake.inputs);
 
     classified = {
-      nixpkgs = filterAttrs (_: isNixpkgsLike) raw;
-      nix-darwin = filterAttrs (_: isNixDarwinLike) raw;
-      treefmt = filterAttrs (_: isTreefmtLike) raw;
+      nixpkgs = filter (_: isNixpkgsLike) raw;
+      nix-darwin = filter (_: isNixDarwinLike) raw;
+      treefmt = filter (_: isTreefmtLike) raw;
 
       home-manager =
-        filterAttrs
-        (input: value: isHomeManagerLike value || input == "nixHM")
+        filter
+        (
+          input: value:
+            isHomeManagerLike value
+          # || input == "nixHM"
+        )
         raw;
 
       modules =
-        filterAttrs
-        (input: value:
-          hasModules value
-          && !(isNixpkgsLike value)
-          && input != "nixHM")
+        filter
+        (
+          input: value:
+            hasModules value
+            && !(isNixpkgsLike value)
+          # && input != "nixHM"
+        )
         raw;
 
-      overlays = filterAttrs (_: hasOverlays) raw;
+      overlays = filter (_: hasOverlays) raw;
 
       packages =
-        filterAttrs
+        filter
         (_: value: value ? packages && !(isNixpkgsLike value))
         raw;
 
-      libraries = filterAttrs (_: hasLib) raw;
-      infrastructure = filterAttrs (_: isNixpkgsInfrastructure) raw;
+      libraries = filter (_: hasLib) raw;
+      infrastructure = filter (_: isNixpkgsInfrastructure) raw;
     };
 
     normalized = {
       nixpkgs =
-        if defaults ? nixpkgs && isNotEmpty defaults.nixpkgs
+        if isNotEmpty (defaults.nixpkgs or {})
         then defaults.nixpkgs
-        else pickFirst classified.nixpkgs;
+        else firstOf classified.nixpkgs;
 
-      nix-darwin = pickFirst classified.nix-darwin;
-      home-manager = pickFirst classified.home-manager;
-      treefmt = pickFirst classified.treefmt;
+      nix-darwin = firstOf classified.nix-darwin;
+      home-manager = firstOf classified.home-manager;
+      treefmt = firstOf classified.treefmt;
     };
-  in {
-    inherit raw classified normalized;
-  };
-
-  nixpkgs =
-    if inputs'.normalized.nixpkgs != null
-    then import ./nixpkgs.nix inputs'.normalized.nixpkgs
-    else {};
+  in {inherit raw classified normalized;};
 
   libraries = let
-    classified =
-      (
-        mapAttrs
-        (_: input: input.lib)
-        inputs'.classified.libraries
-      )
-      // {inherit bootstrap nixpkgs;};
+    classified = (
+      maps
+      (_: input: input.lib)
+      inputs.classified.libraries
+    );
 
     normalized =
       (
-        mapAttrs
+        maps
         (_: input: input.lib)
         (
-          filterAttrs
+          filter
           (_: value: value != null && value ? lib)
-          inputs'.normalized
+          inputs.normalized
         )
       )
-      // asAttrsIf (inputs'.normalized.treefmt != null) {
-        treefmt =
-          inputs'.normalized.treefmt.lib
-          // {
-            inherit root;
-            flake = inputs'.normalized.treefmt;
-          };
-      };
+      // {
+        inherit bootstrap;
+        nixpkgs = import ./nixpkgs.nix inputs.normalized.nixpkgs;
+      }
+      // (
+        asIf
+        (inputs ? normalized.treefmt.lib)
+        {treefmt = inputs.normalized.treefmt.lib // {inherit path;};}
+      );
 
-    merged = classified // normalized;
+    merged = update classified normalized;
     default =
-      bootstrap
-      // nixpkgs
+      normalized.nixpkgs
       // classified
       // normalized;
   in {inherit classified normalized merged default;};
@@ -126,34 +117,37 @@
     excludes = defaults.excludes.modules or [];
 
     raw =
-      filterAttrs
+      filter
       (input: _: !(elem input excludes))
-      inputs'.classified.modules;
+      inputs.classified.modules;
 
-    hmModuleKey = type:
-      if type == "nixos"
-      then "nixosModules"
-      else if type == "darwin"
-      then "darwinModules"
-      else null;
-
-    collect = type: collectModules type raw;
-
-    classified = {
-      nixos = collect "nixos";
-      darwin = collect "darwin";
-      home = collect "home";
+    classified = let
+      mk = type: collect type raw;
+    in {
+      nixos = mk "nixos";
+      darwin = mk "darwin";
+      home = mk "home";
     };
 
     normalized = {
       home-manager = type: let
-        key = hmModuleKey type;
-        input = inputs'.normalized.home-manager;
+        key = type:
+          if type == "nixos"
+          then "nixosModules"
+          else if type == "darwin"
+          then "darwinModules"
+          else null;
+        input = inputs.normalized.home-manager;
       in
         asListIf
-        (key != null && input != null && input ? ${key}.home-manager)
+        (
+          (isNotEmpty key)
+          && (isNotEmpty input) #TODO: We shoouldn't need this, `?` does this
+          && input ? ${key}.home-manager
+        )
         input.${key}.home-manager;
     };
+
     mkCore = type:
       if type == "nixos" || type == "darwin"
       then
@@ -161,26 +155,24 @@
         ++ normalized.home-manager type
         ++ [{nixpkgs.config = {inherit (defaults) allowUnfree;};}]
       else throw "external.modules.mkCore: unknown type '${type}'";
-  in {
-    inherit raw classified normalized excludes;
-
-    home = classified.home;
-    nixos = mkCore "nixos";
-    darwin = mkCore "darwin";
-  };
+  in
+    {
+      inherit raw classified normalized excludes mkCore;
+    }
+    // classified;
 
   overlays = let
     excludes = defaults.excludes.overlays or [];
 
     raw =
-      filterAttrs
+      filter
       (input: _: !(elem input excludes))
-      inputs'.classified.overlays;
+      inputs.classified.overlays;
 
     classified =
-      filterAttrs
+      filter
       (_: value: value != {})
-      (mapAttrs (_: input: input.overlays or {}) raw);
+      (maps (_: input: input.overlays or {}) raw);
 
     normalized = {};
   in {
@@ -189,49 +181,52 @@
     all = classified // normalized;
 
     default =
-      concatLists
-      (map preferDefaultModules (attrValues classified));
+      concat
+      (map preferDefault (valuesOf classified));
   };
 
   packages = let
-    raw = inputs'.classified.packages;
+    raw = inputs.classified.packages;
 
     classified =
-      mapAttrs
+      maps
       (_: getPackages)
       raw;
 
     normalized =
-      asAttrsIf (inputs'.normalized.nixpkgs != null) {
-        nixpkgs = getPackages inputs'.normalized.nixpkgs;
+      asIf (inputs.normalized.nixpkgs != null) {
+        nixpkgs = getPackages inputs.normalized.nixpkgs;
       }
-      // asAttrsIf (inputs'.normalized.home-manager != null) {
-        home-manager = getPackages inputs'.normalized.home-manager;
+      // asIf (inputs.normalized.home-manager != null) {
+        home-manager = getPackages inputs.normalized.home-manager;
       };
   in {
     inherit raw classified normalized;
 
     all = classified // normalized;
-    default = orEmptyAttrs normalized.nixpkgs;
-  };
-
-  flake = {
-    inherit libraries modules overlays packages;
-
-    name = names.src;
-    path = paths.src;
-    inputs = inputs';
-
-    inherit
-      (inputs'.normalized)
-      treefmt
-      nixpkgs
-      nix-darwin
-      home-manager
-      ;
+    default = orEmpty normalized.nixpkgs;
   };
 in
-  libraries
-  // asAttrsIf (isFlakeLike inputs') {
-    inherit flake;
+  libraries.default
+  // asIf (isFlakeLike inputs) {
+    ${name} = {
+      inherit
+        defaults
+        inputs
+        libraries
+        modules
+        name
+        overlays
+        packages
+        path
+        ;
+
+      # inherit
+      #   (inputs.normalized)
+      #   treefmt
+      #   nixpkgs
+      #   nix-darwin
+      #   home-manager
+      #   ;
+    };
   }

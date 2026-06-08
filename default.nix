@@ -25,7 +25,8 @@
   };
 
   bootstrap = import paths.bootstrap;
-  inherit (bootstrap) getEnv recursiveUpdate;
+  inherit (bootstrap.attrsets) inspect orEmpty update;
+  inherit (bootstrap.config) getEnv mkDots;
 
   defaults = let
     base = {
@@ -62,18 +63,18 @@
       tags = ["core" "home"];
     };
   in
-    recursiveUpdate base (flake.defaults or {});
+    update base (flake.defaults or {});
 
-  libraries = import paths.libraries {
-    inherit bootstrap defaults paths names;
-    inherit (flake) inputs root;
-  };
+  libraries =
+    import paths.libraries {
+      inherit bootstrap defaults paths names;
+    }
+    // flake;
   inherit (libraries) api;
 in
-  libraries.orEmptyAttrs libraries.flake
-  // libraries.mkDots paths api.hosts.${defaults.host}
+  orEmpty libraries.flake
+  // mkDots paths api.hosts.${defaults.host}
   // {
-    inherit api defaults libraries names bootstrap paths;
-    inspect = bootstrap.inspectAttrs;
+    inherit api defaults inspect libraries names paths;
     "${names.lib}" = libraries;
   }

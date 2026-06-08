@@ -5,41 +5,50 @@ let
         as
         asIf
         filter
-        inheritOne
+        firstOf
+        fromList
+        get
+        gets
+        gets'
+        has
+        inspect
+        is
+        maps
+        namesOf
         orEmpty
+        orEmpty'
         update
-        findFirst
+        valuesOf
         ;
+      select = filter;
+      getFirst = firstOf;
+      orEmptyNamed = orEmpty';
     };
 
     global = {
       asAttrs = as;
       asAttrsIf = asIf;
       filterAttrs = filter;
-      inheritAttr = inheritOne;
+      findFirstAttr = firstOf;
+      getAttrs = gets;
+      getAttrsSafe = gets;
+      inheritAttr = orEmpty';
+      inspectAttrs = inspect;
       orEmptyAttrs = orEmpty;
-      recursiveUpdate = update;
       recursiveUpdate' = update;
-      pickFirst = findFirst;
-      findFirstAttr = findFirst;
     };
   };
 
-  inherit
-    (builtins)
-    attrNames
-    attrValues
-    getAttr
-    hasAttr
-    head
-    isAttrs
-    isList
-    isString
-    listToAttrs
-    typeOf
-    ;
-
   inherit ((import ./types.nix).scoped) isNotEmpty;
+  inherit (builtins) head isFunction isList isString typeOf;
+  namesOf = builtins.attrNames;
+  valuesOf = builtins.attrValues;
+  get = builtins.getAttr;
+  has = builtins.hasAttr;
+  is = builtins.isAttrs;
+  fromList = builtins.listToAttrs;
+  intersect = builtins.intersectAttrs;
+  maps = builtins.mapAttrs;
 
   /**
   Coerce a value into an attrset.
@@ -81,13 +90,13 @@ let
   as = value: let
     type = typeOf value;
   in
-    if isAttrs value
+    if is value
     then value
     else if isString value
     then {${value} = true;}
     else if isList value
     then
-      listToAttrs (
+      fromList (
         map
         (name: {
           inherit name;
@@ -170,7 +179,7 @@ let
   ```
   */
   filter = predicate: set:
-    listToAttrs (
+    fromList (
       map
       (name: {
         inherit name;
@@ -179,62 +188,133 @@ let
       (
         builtins.filter
         (name: predicate name set.${name})
-        (attrNames set)
+        (namesOf set)
       )
     );
 
   /**
-  Inherit a named attribute from a source attrset when it exists.
+  Select a specific list of attributes from an attrset.
 
-  Supports two call forms:
-  - Curried: `inheritOne name set`
-  - Attrset: `inheritOne { name = ...; set = ...; }`
+  Returns a new attrset containing only the keys specified in the names list.
+  Note that this function will throw an evaluation error if any of the specified
+  names do not exist in the source attrset.
+
+  # Type
+  ```nix
+  gets :: [String] -> { ${String} :: a; } -> { ${String} :: a; }
+  ```
+  # Dependencies
+  None
+
+  # Arguments
+  names
+  : A list of attribute names (strings) to extract.
+
+  attrs
+  : The source attrset to extract values from.
+
+  #Examples
+  ```nix
+  gets [ "a" "c" ] { a = 1; b = 2; c = 3; }
+  # => { a = 1; c = 3; }
+
+  gets [ "x" ] { a = 1; }
+  # => error: attribute 'x' missing
+  ```
+  */
+  gets = names: attrs:
+    fromList (
+      map (name: {
+        name = name;
+        value = attrs.${name};
+      })
+      names
+    );
+
+  /**
+  Safely select a specific list of attributes from an attrset.
+
+  Returns a new attrset containing only the keys specified in the names list
+  that actually exist in the source attrset. Missing keys are gracefully ignored.
+
+  # Type
+  ```nix
+  gets' :: [String] -> { ${String} :: a; } -> { ${String} :: a; }
+  ```
+
+  # Dependencies
+  None
+
+  # Arguments
+  names
+  : A list of attribute names (strings) to look for.
+
+  attrs
+  : The source attrset to filter against.
+
+  # Examples
+  ```nix
+  gets' [ "a" "x" ] { a = 1; b = 2; }
+  # => { a = 1; }
+  ```
+  */
+  gets' = names: attrs:
+    intersect
+    (fromList (map (name: {
+        name = name;
+        value = null;
+      })
+      names))
+    attrs;
+
+  /**
+  Recursively inspect an attrset or list to a bounded depth.
+
+  Functions and paths are rendered as placeholders to keep inspection safe
+  and REPL-friendly.
 
   # Type
 
   ```nix
-  inheritOne :: String -> { ... } -> { ... }
-  inheritOne :: { name :: String; set :: { ... }; ... } -> { ... }
+  inspect :: Int -> a -> a
   ```
 
   # Dependencies
 
-  None
+  - debug.inspect
 
   # Arguments
 
-  name
-  : The attribute name to inherit.
+  level
+  : Maximum inspection depth.
 
-  set
-  : The source attrset.
+  value
+  : The value to inspect.
 
   # Examples
 
   ```nix
-  inheritOne "flake" { flake = { a = 1; }; }
-  # => { flake = { a = 1; }; }
-
-  inheritOne "flake" {}
-  # => {}
+  inspect 1 { a.b = 1; }
+  # => { a = "..."; }
   ```
   */
-  inheritOne = nameOrArgs:
-    if isAttrs nameOrArgs
-    then let
-      name = nameOrArgs.name or null;
-      set = nameOrArgs.set or null;
+  inspect = level: let
+    fn = depth: value: let
+      type = typeOf value;
     in
-      if name == null || set == null
-      then throw "attrsets.inheritOne:= expected { name, set; }"
-      else if hasAttr name set
-      then {${name} = getAttr name set;}
-      else {}
-    else
-      set:
-        if hasAttr nameOrArgs set
-        then {${nameOrArgs} = getAttr nameOrArgs set;}
-        else {};
+      if depth <= 0
+      then "..."
+      else if isFunction value
+      then "<function>"
+      else if isList value
+      then map (fn (depth - 1)) value
+      else if is value
+      then maps (_: fn (depth - 1)) value
+      else if type == "path"
+      then "<path>"
+      else value;
+  in
+    fn level;
 
   /**
   Normalize a value to a non-empty attrset.
@@ -271,9 +351,62 @@ let
   ```
   */
   orEmpty = value:
-    if isAttrs value && isNotEmpty value
+    if is value && isNotEmpty value
     then value
     else {};
+
+  /**
+  Inherit a named attribute from a source attrset when it exists.
+
+  Supports two call forms:
+  - Curried: `orEmpty' name set`
+  - Attrset: `orEmpty' { name = ...; set = ...; }`
+
+  # Type
+
+  ```nix
+  orEmpty' :: String -> { ... } -> { ... }
+  orEmpty' :: { name :: String; set :: { ... }; ... } -> { ... }
+  ```
+
+  # Dependencies
+
+  None
+
+  # Arguments
+
+  name
+  : The attribute name to inherit.
+
+  set
+  : The source attrset.
+
+  # Examples
+
+  ```nix
+  orEmpty' "flake" { flake = { a = 1; }; }
+  # => { flake = { a = 1; }; }
+
+  orEmpty' "flake" {}
+  # => {}
+  ```
+  */
+  orEmpty' = nameOrArgs:
+    if is nameOrArgs
+    then let
+      name = nameOrArgs.name or null;
+      set = nameOrArgs.set or null;
+    in
+      if name == null || set == null
+      then throw "attrsets.orEmpty':= expected { name, set; }"
+      else if has name set
+      then {${name} = get name set;}
+      else {}
+    else
+      set:
+        if has nameOrArgs set
+        then {${nameOrArgs} = get nameOrArgs set;}
+        else {};
 
   /**
   Recursively merge two attrsets.
@@ -307,9 +440,9 @@ let
   ```
   */
   update = lhs: rhs:
-    if isAttrs lhs && isAttrs rhs
+    if is lhs && is rhs
     then
-      listToAttrs (
+      fromList (
         map
         (key: {
           name = key;
@@ -320,7 +453,7 @@ let
             then rhs.${key}
             else lhs.${key};
         })
-        (attrNames (lhs // rhs))
+        (namesOf (lhs // rhs))
       )
     else rhs;
 
@@ -332,7 +465,7 @@ let
   # Type
 
   ```nix
-  findFirst :: AttrSet -> a | null
+  firstOf :: AttrSet -> a | null
   ```
 
   # Dependencies
@@ -347,16 +480,16 @@ let
   # Examples
 
   ```nix
-  findFirst {}
+  firstOf {}
   # => null
 
-  findFirst { a = 1; }
+  firstOf { a = 1; }
   # => 1
   ```
   */
-  findFirst = attrs:
+  firstOf = attrs:
     if attrs == {}
     then null
-    else head (attrValues attrs);
+    else head (valuesOf attrs);
 in
   exports

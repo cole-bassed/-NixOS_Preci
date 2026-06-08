@@ -13,16 +13,8 @@ let
     };
   };
 
-  inherit
-    (builtins)
-    attrValues
-    concatLists
-    getAttr
-    hasAttr
-    mapAttrs
-    ;
-
-  inherit ((import ./lists.nix).scoped) asIf unique;
+  inherit ((import ./attrsets.nix).scoped) get has maps valuesOf;
+  inherit ((import ./lists.nix).scoped) asIf concat unique;
 
   /**
   Prefer a module set's `default` entry when present.
@@ -43,7 +35,7 @@ let
   preferDefault = modules:
     if modules ? default
     then [modules.default]
-    else attrValues modules;
+    else valuesOf modules;
 
   /**
   Collect modules of a given type from a set of flake inputs.
@@ -78,13 +70,13 @@ let
     rawCollected =
       if type == "home"
       then
-        concatLists (
-          attrValues (
-            mapAttrs
+        concat (
+          valuesOf (
+            maps
             (
               _: input: let
                 mods =
-                  if hasAttr "homeModules" input
+                  if has "homeModules" input
                   then input.homeModules
                   else input.homeManagerModules or {};
               in
@@ -94,14 +86,14 @@ let
           )
         )
       else
-        concatLists (
-          attrValues (
-            mapAttrs
+        concat (
+          valuesOf (
+            maps
             (
               _: input:
                 asIf
-                (hasAttr moduleAttr input)
-                (preferDefault (getAttr moduleAttr input))
+                (has moduleAttr input)
+                (preferDefault (get moduleAttr input))
             )
             modules
           )

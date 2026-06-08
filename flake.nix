@@ -1,6 +1,34 @@
 {
   description = "Configuration Flake";
 
+  outputs = inputs: let
+    root = ./.;
+    defaults = {
+      allowUnfree = true;
+      nixpkgs = inputs.nixCore;
+      excludes = let
+        core = [
+          "nixCore"
+          "nixLegacy"
+          "nixDarwin"
+          "nixEdge"
+        ];
+      in {
+        modules = core ++ ["treeFormatter" "treefmt"];
+        overlays = core ++ ["nixHM" "home-manager"];
+      };
+    };
+
+    args = import ./. {flake = {inherit defaults inputs root;};};
+  in
+    {inherit args;}
+    // args.libraries.assemble.flake args {
+      configurations = true;
+      utilities = true;
+      devShells = true;
+      templates = true;
+    };
+
   inputs = {
     #~@ Core/Nix Infrastructure
     nixCore.url = "nixpkgs/nixos-unstable";
@@ -122,31 +150,4 @@
       type = "github";
     };
   };
-
-  outputs = inputs: let
-    infrastructure = [
-      "nixCore"
-      "nixLegacy"
-      "nixDarwin"
-      "nixEdge"
-    ];
-    root = ./.;
-    defaults = {
-      allowUnfree = true;
-      nixpkgs = inputs.nixCore;
-      excludes = {
-        modules = infrastructure ++ ["treeFormatter" "treefmt"];
-        overlays = infrastructure ++ ["nixHM" "home-manager"];
-      };
-    };
-
-    args = import ./. {flake = {inherit defaults inputs root;};};
-  in
-    {inherit args;}
-    // args.libraries.assemble.flake args {
-      configurations = true;
-      utilities = true;
-      devShells = true;
-      templates = true;
-    };
 }

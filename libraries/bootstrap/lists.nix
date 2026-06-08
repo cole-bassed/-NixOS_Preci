@@ -7,6 +7,7 @@ let
         orEmpty
         unique
         ;
+      concat = builtins.concatLists;
     };
 
     global = {

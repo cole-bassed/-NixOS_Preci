@@ -1,7 +1,7 @@
 {
-  bootstrap ? import ./bootstrap.nix,
-  defaults ? {allowUnfree = true;},
-  inputs ? {},
+  bootstrap ? import ./bootstrap,
+  defaults ? {},
+  flake ? {},
   name ? names.lib,
   names ? {
     src = "dots";
@@ -9,10 +9,17 @@
     top = "_";
   },
   paths ? {src = ../.;},
-  root ? paths.src,
 }: let
-  external = import ./external {inherit bootstrap inputs defaults names paths root;};
-  internal = import ./internal {inherit external names defaults paths name;};
+  external = import ./external {
+    inherit bootstrap;
+    flake =
+      bootstrap.recursiveUpdate {
+        name = names.src;
+        path = paths.src;
+      }
+      flake;
+  };
+  internal = import ./internal {inherit bootstrap external names defaults paths name;};
 in
   {inherit bootstrap external internal;}
-  // bootstrap.recursiveUpdate external internal
+  // bootstrap.attrsets.update external internal
