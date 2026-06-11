@@ -148,8 +148,8 @@
       name = "config.systemBuilder";
       assertion =
         if class == "nixos"
-        then external ? normalized.nixpkgs.nixosSystem
-        else external ? normalized.nix-darwin.darwinSystem;
+        then external ? modules.normalized.nixpkgs.nixosSystem
+        else external ? modules.normalized.nix-darwin.darwinSystem;
       message = ''
         The required compiler for class "${class}" was not found in your flake inputs.
         Make sure you have passed the correct downstream lib/builder mapping.
@@ -157,8 +157,8 @@
       context = "validating system builder presence in flake inputs";
     };
       if class == "nixos"
-      then external ? normalized.nixpkgs.nixosSystem
-      else external ? normalized.darwin.darwinSystem;
+      then external.modules.normalized.nixpkgs.nixosSystem
+      else external.modules.normalized.darwin.darwinSystem;
 
   # ── supported systems ──────────────────────────────────────────────────────
 
