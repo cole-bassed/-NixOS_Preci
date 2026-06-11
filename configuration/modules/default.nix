@@ -1,35 +1,12 @@
-# {flake, libraries, ...} @ base: let
-#   inherit (libraries.lib.lists) concatMap;
-#   inherit (libraries.modules) importModules;
-#   pkgs = flake.packages.nixpkgs.x86_64-linux;
-#   moduleArgs =
-#     base
-#     // {
-#       inherit pkgs;
-#       inherit (base.names) top;
-#       inherit (flake) inputs;
-#       inherit (libraries) lib lix;
-#     };
-# modules = importModules (moduleArgs // {base = ./modules;});
-# secrets = importModules (moduleArgs // {base = ../secrets;});
-# groupImports = groups: concatMap (group: group.imports or []) groups;
-# groupHome = groups: concatMap (group: group.home-manager.sharedModules or []) groups;
-{libraries, ...} @ base:
-libraries.assemble.configurations base {
-  # modules = {
-  #   core = [./localization.nix];
-  #   home = [];
-  # };
-  # modules = [
-  #   ({host, ...}: {
-  #     system.stateVersion = host.stateVersion 22.11;
-  #     # config.system.stateVersion = config.system.nixos.release;
-  #   })
-  # ];
-  # ++ groupImports (modules.imports or []) ++ (secrets.imports or []);
+{lix, ...} @ base: let
+  inherit (lix.config) assemble;
+  inherit (lix.modules) importModules;
 
-  # modules.home =
-  #   groupHome (modules.imports or [])
-  #   ++ (modules.home-manager.sharedModules or [])
-  #   ++ (secrets.home-manager.sharedModules or []);
-}
+  collected = importModules (base // {base = ./.;});
+in
+  assemble.configurations base {
+    modules = {
+      core = collected.imports;
+      home = collected.home-manager.sharedModules;
+    };
+  }

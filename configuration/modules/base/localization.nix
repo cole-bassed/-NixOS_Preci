@@ -7,7 +7,7 @@
   ...
 }: let
   inherit (lix.modules) mkIf;
-  inherit (lix.attrsets) removeNulls orEmpty;
+  inherit (lix.attrsets) removeNulls;
   inherit
     (lix.options)
     mkModuleArgs

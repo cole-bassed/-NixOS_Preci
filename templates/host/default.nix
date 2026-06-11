@@ -1,7 +1,4 @@
-{flake ? {}, ...}: let
-  name = "NewHost";
-in {
-  inherit name;
+_: {
   class = "nixos";
   system = "x86_64-linux";
   stateVersion = "26.05";

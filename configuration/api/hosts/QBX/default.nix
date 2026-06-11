@@ -217,7 +217,7 @@ in {
     };
   };
 
-  principals = [
+  users = [
     {
       name = "craole";
       enable = true;

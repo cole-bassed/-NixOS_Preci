@@ -21,7 +21,7 @@
     src = import ./. {flake = {inherit defaults inputs;};};
   in
     src.lix.assemble.flake src {
-      configurations = false;
+      configurations = true;
       utilities = true;
       devShells = true;
       templates = true;

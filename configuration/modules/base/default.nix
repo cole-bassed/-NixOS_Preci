@@ -1,14 +1,2 @@
-# {
-#   lix,
-#   pkgs,
-#   ...
-# } @ args:
-# lix.importModules (args
-#   // {
-#     inherit pkgs;
-#     base = ./.;
-#     includeFiles = true;
-#   })
-{
-  imports = [./localization.nix];
-}
+{lix, ...} @ args:
+lix.importModules (args // {base = ./.;})

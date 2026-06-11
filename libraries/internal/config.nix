@@ -252,16 +252,7 @@
               ++ (spec.imports or [])
               ++ (host.modules or [])
               ++ (host.imports or [])
-              # ++ (extraArgs.modules.core or [])
-              # ++ (base.modules.core or [])
-              # ++ (args.modules.core or [])
-              ++ [
-                (import ../../configuration/modules/localization.nix)
-                #   ({host, ...}: {
-                #     system.stateVersion = host.stateVersion or "22.11";
-                #     # config.system.stateVersion = config.system.nixos.release;
-                #   })
-              ]
+              ++ (extraArgs.modules.core or [])
               ++ [
                 {
                   home-manager = {
