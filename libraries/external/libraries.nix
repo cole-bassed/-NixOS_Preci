@@ -7,11 +7,10 @@
   inherit (bootstrap) attrsets;
   inherit (attrsets) asIf filter maps orEmpty;
 
-  classified = (
+  classified =
     maps
     (_: input: input.lib)
-    inputs.classified.libraries
-  );
+    inputs.classified.libraries;
 
   treefmt = orEmpty inputs.normalized.treefmt;
 

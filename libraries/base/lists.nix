@@ -190,10 +190,10 @@ let
     if list == []
     then []
     else
-      [head list]
+      [(head list)]
       ++ unique (
         filter
-        (value: value != head list)
+        (value: value != (head list))
         (tail list)
       );
 in

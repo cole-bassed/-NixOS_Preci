@@ -225,7 +225,7 @@ let
   gets = names: attrs:
     fromList (
       map (name: {
-        name = name;
+        inherit name;
         value = attrs.${name};
       })
       names
@@ -261,7 +261,7 @@ let
   gets' = names: attrs:
     intersect
     (fromList (map (name: {
-        name = name;
+        inherit name;
         value = null;
       })
       names))
@@ -449,9 +449,7 @@ let
           value =
             if lhs ? ${key} && rhs ? ${key}
             then merge lhs.${key} rhs.${key}
-            else if rhs ? ${key}
-            then rhs.${key}
-            else lhs.${key};
+            else rhs.${key} or lhs.${key};
         })
         (namesOf (lhs // rhs))
       )

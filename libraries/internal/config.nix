@@ -82,17 +82,7 @@
         paths = {
           local = let
             src =
-              if host ? paths.src
-              then host.paths.src
-              else if host ? paths.dots
-              then host.paths.dots
-              else if host ? paths.home
-              then host.paths.home
-              else if host ? dots
-              then host.dots
-              else if host ? home
-              then host.home
-              else paths.local.src;
+              host.paths.src or (host.paths.dots or (host.paths.home or (host.dots or (host.home or paths.local.src))));
           in
             recursiveUpdate paths.local (
               recursiveUpdate {inherit src;} (host.paths or {})
@@ -172,12 +162,17 @@
 
   # ── supported systems ──────────────────────────────────────────────────────
 
-  supportedSystems = {extra ? []}:
-    unique (
-      extra
-      ++ map (host: host.system or host.platform or defaultHost.system)
-      (attrValues hosts)
-    );
+  # supportedSystems = {extra ? []}:
+  #   unique (
+  #     extra
+  #     ++ map (host: host.system or host.platform or defaultHost.system)
+  #     (attrValues hosts)
+  #   );
+  supportedSystems = {extra ? []}: let
+    raw = extra ++ map (host: host.system or host.platform or defaultHost.system) (attrValues hosts);
+    _ = builtins.trace "supportedSystems raw: ${builtins.toJSON raw}" null;
+  in
+    unique raw;
 
   # ── perSystem ──────────────────────────────────────────────────────────────
 
@@ -247,12 +242,9 @@
               inherit host;
               overrides = extraArgs;
             };
-            specialArgs = (
-              {
-                inherit top host src;
-              }
-              // (removeAttrs src ["lib" "modules" "packages"])
-            );
+            specialArgs =
+              {inherit top host src;}
+              // (removeAttrs src ["lib" "modules" "packages"]);
           in {
             inherit class specialArgs;
             modules =

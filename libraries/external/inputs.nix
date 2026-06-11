@@ -23,8 +23,7 @@
     home-manager =
       filter
       (
-        input: value:
-          isHomeManagerLike value
+        input: isHomeManagerLike
         # || input == "nixHM"
       )
       raw;
