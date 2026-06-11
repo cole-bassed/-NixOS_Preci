@@ -20,8 +20,7 @@
 
     src = import ./. {flake = {inherit defaults inputs;};};
   in (
-    src
-    // src.lix.assemble.flake src {
+    src.lix.assemble.flake src {
       configurations = false;
       utilities = false;
       devShells = false;
