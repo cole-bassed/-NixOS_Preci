@@ -25,4 +25,5 @@
     import paths.store.libraries
     {inherit flake names paths;};
 in
-  libraries.${names.src}
+  libraries
+# libraries.${names.src}

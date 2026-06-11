@@ -19,15 +19,17 @@
     };
 
     src = import ./. {flake = {inherit defaults inputs;};};
-  in (
-    {${src.names.src} = src;}
-    // src.libraries.assemble.flake src {
-      configurations = false;
-      utilities = true;
-      devShells = true;
-      templates = true;
-    }
-  );
+  in
+    src;
+  # (
+  # {${src.names.src} = src;}
+  # // src.libraries.assemble.flake src {
+  #   configurations = false;
+  #   utilities = true;
+  #   devShells = true;
+  #   templates = true;
+  # }
+  # );
 
   inputs = {
     #~@ Core/Nix Infrastructure

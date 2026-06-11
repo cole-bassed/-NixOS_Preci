@@ -2,12 +2,13 @@
   bootstrap ? import ../base,
   external ? import ../external {},
 }: let
-  inherit (bootstrap.attrsets) gets orEmpty' maps update;
+  inherit (bootstrap.attrsets) gets orEmpty' maps merge;
+  flake = external.flake or {};
   name = args.names.lib;
   args = {
     inherit bootstrap;
     defaults =
-      update {
+      merge {
         host = "ExampleHost";
         excludes = {
           paths = [
@@ -23,22 +24,22 @@
 
         tags = ["core" "home"];
       }
-      defaults;
+      (flake.defaults or {});
 
     paths =
-      update {
-        src = ../.;
+      merge {
+        src = ../../.;
         api = ../configuration/api;
       }
-      paths;
+      (flake.paths or {});
 
     names =
-      update {
+      merge {
         src = "dots";
         lib = "lix";
         top = "_";
       }
-      names;
+      (flake.names or {});
   };
 
   scoped =
@@ -55,37 +56,21 @@
   };
 
   base =
-    update
-    (update bootstrap external)
-    {inherit defaults names paths;};
-
-  all = external.classified;
-
-  default = update base (
-    global
-    // scoped
-    // {
-      lib = base;
-
-      "${name}" = update external (
-        global
-        // scoped
-        // {
-          inherit global scoped;
-        }
-      );
-    }
-  );
+    merge
+    (merge external bootstrap)
+    {inherit (args) defaults names paths;};
 
   mkLib = includes:
-    update base (
-      {libraries = all;}
-      // orEmpty' "flake" external
+    merge base (
+      {
+        # libraries = base;
+        inherit flake;
+      }
       // gets includes scoped
     );
 
   libraries = {
-    api = import paths.api (mkLib [
+    api = import args.paths.api (mkLib [
       "attrsets"
       "modules"
       "lists"
@@ -144,6 +129,19 @@
       "debug"
     ]);
   };
+
+  merged = merge base (
+    global
+    // scoped
+    // {
+      lib = external;
+
+      "${name}" = merge external (
+        global
+        // scoped
+        // {inherit global scoped;}
+      );
+    }
+  );
 in
-  default
-# ${names.src}=internal.${names.src} or external.${names.src};
+  merged
