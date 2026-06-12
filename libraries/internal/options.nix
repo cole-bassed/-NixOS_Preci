@@ -83,12 +83,15 @@
     top,
     dom,
     mod,
+    host ? {},
     scope ? "core",
   }: let
     path = [top dom mod];
   in {
+    inherit host top config scope;
     cfg = mkCfg {inherit config path;};
     opt = options: mkOpt {inherit options path;};
+    base = mod;
     mkEnableMod = mkEnableMod {inherit mod scope;};
   };
 

@@ -5,8 +5,6 @@ in
     // {
       base = ./.;
       excludes = [
-        "ai"
-        "applications"
-        "interface"
+        "review"
       ];
     })

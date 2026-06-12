@@ -66,16 +66,10 @@
   mkLib = includes: merge base (gets includes scoped);
 
   libraries = {
-    api = import args.paths.store.api (mkLib [
+    assembly = import ./assembly.nix (mkLib [
       "attrsets"
       "modules"
       "lists"
-    ]);
-
-    attrsets = import ./attrsets.nix (mkLib [
-      "debug"
-      "lists"
-      "types"
     ]);
 
     # config = import ./config (mkLib [
@@ -87,27 +81,12 @@
     #   "types"
     # ]);
 
-    debug = import ./debug.nix (mkLib [
+    modules = import ./modules.nix (mkLib [
+      "debug"
+      "filesystem"
       "lists"
       "types"
     ]);
-
-    filesystem = import ./filesystem.nix (mkLib [
-      "debug"
-      "lists"
-    ]);
-
-    lists = import ./lists.nix (mkLib [
-      "debug"
-      "types"
-    ]);
-
-    # modules = import ./modules.nix (mkLib [
-    #   "debug"
-    #   "filesystem"
-    #   "lists"
-    #   "types"
-    # ]);
 
     options = import ./options.nix (mkLib [
       "debug"

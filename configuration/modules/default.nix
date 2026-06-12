@@ -13,8 +13,5 @@ in
         "ai"
         "applications"
         "interface"
-        "review"
-        "default.nix"
-        "flake.nix"
       ];
     })

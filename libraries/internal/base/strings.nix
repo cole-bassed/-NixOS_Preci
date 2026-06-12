@@ -2,9 +2,10 @@ let
   exports = {
     scoped = {
       inherit
-        trim
         cat
+        concat
         orEmpty
+        trim
         ;
     };
 
@@ -12,6 +13,7 @@ let
       inherit cat;
       trimString = trim;
       orEmptyString = orEmpty;
+      joinStrings = concat;
     };
   };
 
@@ -20,10 +22,12 @@ let
     attrNames
     concatLists
     concatStringsSep
+    filter
     head
     substring
     isString
     isAttrs
+    isList
     lessThan
     match
     readDir
@@ -32,6 +36,62 @@ let
     sort
     stringLength
     ;
+
+  /**
+  Concatenate a list of strings with an optional delimiter, safely filtering out null values.
+
+  Supports three hybrid invocation patterns: an explicit configuration attribute set,
+  a curried positional layout (delimiter string then parts list), or a shorthand parts
+  list (which defaults the delimiter to an empty string `""`).
+
+  # Type
+  ```nix
+  concat :: AttrSet -> String
+  concat :: String -> List String -> String
+  concat :: List String -> String
+
+  # Dependencies
+  ```nix
+  - builtins.concatStringsSep
+  - builtins.filter
+  - builtins.isAttrs
+  - builtins.isString
+  - builtins.isList
+  ```
+
+  # Arguments
+  arg
+  : An configuration attribute set { delim ?, parts }, a delimiter string, or a direct list of string parts.
+
+  # Examples
+  Nix
+  # Pattern 1: Explicit Attribute Set Configuration
+  concat { delim = "-"; parts = [ "foo" "bar" ]; }
+  # => "foo-bar"
+
+  # Pattern 2: Curried Positional (Delimiter then Parts)
+  concat "/" [ "usr" "local" "bin" ]
+  # => "usr/local/bin"
+
+  # Pattern 3: Shorthand List (Omits Delimiter)
+  concat [ "a" "b" "c" ]
+  # => "abc"
+
+  # Built-in Null Safety
+  concat { delim = "_"; parts = [ "core" null "system" ]; }
+  # => "core_system"
+  */
+  concat = arg: let
+    exec = delim: parts:
+      concatStringsSep delim (filter (part: part != null) parts);
+  in
+    if isAttrs arg
+    then exec (arg.delim or "") arg.parts
+    else if isString arg
+    then parts: exec arg parts
+    else if isList arg
+    then exec "" arg
+    else exec "" [];
 
   /**
   Read a file, or recursively collect and label all regular files in a directory.

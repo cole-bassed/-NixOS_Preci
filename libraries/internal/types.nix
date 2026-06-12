@@ -14,6 +14,7 @@
         isFunction'
         isNull
         isNotNull
+        isEnabled
         ;
       isFunctionSafe = isFunction';
     };
@@ -22,17 +23,71 @@
   inherit (debug) withContext;
   inherit (lists) head tail isList optionals reverseList;
   inherit (strings) concatStrings stringLength stringToCharacters;
-  inherit (types) isAttrs isString;
-  # inherit (builtins) isFunction tryEval;
+  inherit (types) isAttrs isBool isString;
+  inherit (builtins) isFunction tryEval;
 
-  isFunction' = builtins.isFunction;
-  #: TODO: Not working, still throwing the functor error
-  # isFunction' = value:
-  #   isFunction value
-  #   || (
-  #     value ? __functor
-  #     && (tryEval (isFunction (value.__functor value))).value
-  #   );
+  /**
+  Determine if a module, feature, or configuration target is enabled.
+
+  Follows the structural design principle of "presence implies intent." Naked
+  booleans are evaluated directly. Attribute sets look for an explicit `enable`
+  or `enabled` flag; if neither is specified, it is assumed the user wants the
+  feature active, defaulting to `true`. All other fallback types evaluate to `true`.
+
+  # Type
+  ```nix
+    isEnabled :: a -> Bool
+  ```
+
+  # Dependencies
+  ```nix
+  - types.isBool
+  - types.isAttrs
+  ```
+
+  # Arguments
+  value
+  : The configuration toggle, attribute set, or value to evaluate.
+
+  # Examples
+  ```nix
+  # Naked booleans pass through directly
+  isEnabled true
+  # => true
+
+  isEnabled false
+  # => false
+
+  # Explicit overrides inside attribute sets
+  isEnabled { enable = false; }
+  # => false
+
+  isEnabled { enabled = true; }
+  # => true
+
+  # Presence implies intent (no explicit toggle means true)
+  isEnabled { userName = "John Doe"; }
+  # => true
+
+  # Fallback fail-safe for unexpected types
+  isEnabled "active"
+  # => true
+  ```
+  */
+  isEnabled = value:
+    if isBool value
+    then value
+    else if isAttrs value
+    then value.enable or (value.enabled or true)
+    else true;
+
+  /**
+  Strict check for callables, safely handling standard primitive functions
+  and Nix attribute set functors without accidentally evaluating them.
+  */
+  isFunction' = value:
+    isFunction value
+    || (isAttrs value && value ? __functor && isFunction value.__functor);
 
   # Minimal local trim so predicates doesn't circularly depend on strings.
   trim = s: let

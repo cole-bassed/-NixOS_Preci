@@ -1,4 +1,9 @@
-{debug, ...}: let
+{
+  debug,
+  types,
+  strings,
+  ...
+}: let
   exports = {
     scoped = {
       inherit
@@ -17,6 +22,8 @@
   };
 
   inherit (debug) addErrorContext assertMsg deepSeq traceIf tryEval;
+  inherit (types) isAttrs isBool isPath isString typeOf;
+  inherit (strings) toJSON;
 
   assertMsgFunc = {
     name,
@@ -122,5 +129,24 @@
       };
       outcome = tryEval outcome;
     };
+
+  expect = {
+    type,
+    value,
+    context,
+    name,
+  }:
+    assert debug.withContext {
+      inherit name context;
+      assertion =
+        if type == "bool"
+        then isBool value
+        else if type == "attrs"
+        then isAttrs value
+        else if type == "path"
+        then (isPath value || (isString value && value != ""))
+        else false;
+      message = "Expected type '${type}', but got '${typeOf value}' with value: ${toJSON value}";
+    }; value;
 in
   exports

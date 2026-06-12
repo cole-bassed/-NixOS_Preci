@@ -1,5 +1,5 @@
 {
-  bootstrap ? import ../base,
+  bootstrap ? import ../internal/base,
   defaults ? {allowUnfree = true;},
   flake ? {},
   inputs ? {},
@@ -8,7 +8,7 @@
   path ? null,
   paths ? {},
 }: let
-  inherit (bootstrap.attrsets) asAttrsIf merge;
+  inherit (bootstrap.attrsets) merge;
   inherit (bootstrap.types) isFlakeLike isAttrs;
   inherit (bootstrap.config) getEnv;
 

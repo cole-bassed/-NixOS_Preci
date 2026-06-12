@@ -2,6 +2,7 @@
   attrsets,
   config,
   defaults,
+  environment,
   filesystem,
   lists,
   strings,
@@ -19,8 +20,6 @@
         importModule
         importModules
         importProfiles
-        mkCdAliases
-        mkEnvVars
         mkHomeUser
         mkHomeUsers
         readDirAttrs
@@ -36,8 +35,6 @@
         importModule
         importModules
         importProfiles
-        mkCdAliases
-        mkEnvVars
         mkHomeUser
         mkHomeUsers
         readDirAttrs
@@ -46,12 +43,14 @@
     };
   };
 
-  inherit (attrsets) attrNames attrValues filterAttrs foldlAttrs genAttrs mapAttrs mapAttrs' mapAttrsToList;
+  inherit (attrsets) namesOf valuesOf filterAttrs genAttrs mapAttrs mapAttrs' mapAttrsToList;
+  inherit (entrypoints.nix) candidates;
+  inherit (environment) mkVariables mkCdAliases;
   inherit (filesystem) pathExists readDir entrypoint entrypoints;
   inherit (lists) asList any concatMap elem findFirst length;
-  inherit (strings) hasSuffix toUpper;
-  inherit (types) isAttrs isString isFunction;
-  inherit (entrypoints.nix) candidates;
+  inherit (strings) hasSuffix;
+  inherit (types) isFunction;
+
   pathExcludes =
     defaults.excludes.paths or [
       "archive"
@@ -207,7 +206,7 @@
   getUsers = declared: let
     # ── group constructor ────────────────────────────────────────────────────
     mkGroup = attrs: let
-      names = attrNames attrs;
+      names = namesOf attrs;
       values = mapAttrs (name: user:
         user
         // {
@@ -252,8 +251,6 @@
       in
         (mkGroup subset) // {byStatus = mkStatusIndex subset;});
 
-    # ── assemble ─────────────────────────────────────────────────────────────
-
     users = mapAttrs (_: u:
       {
         role = "user";
@@ -291,7 +288,7 @@
         in {
           home = {
             inherit (osConfig.system) stateVersion;
-            sessionVariables = mkEnvVars "" paths;
+            sessionVariables = mkVariables "" paths;
             shellAliases = mkCdAliases paths;
           };
           programs.home-manager.enable = true;
@@ -322,7 +319,7 @@
     then let
       byName = collectNamedSpecs {inherit args base excludes tags extraArgs;};
     in {
-      imports = concatMap (profile: asList (profile.core or null)) (attrValues byName);
+      imports = concatMap (profile: asList (profile.core or null)) (valuesOf byName);
       home-manager.users =
         mapAttrs (
           name: profile: {config, ...}: mkHomeUser {inherit config name profile;}
@@ -361,37 +358,5 @@
         kind = "profiles";
         inherit base excludes tags extraArgs;
       });
-
-  # flatten paths attrset into env vars
-  # { pictures = { base = "/home/craole/Pictures"; }; }
-  # → PICTURES="/home/craole/Pictures"
-  mkEnvVars = prefix: attrs:
-    foldlAttrs (
-      acc: name: value: let
-        key = toUpper "${prefix}${
-          if prefix == ""
-          then name
-          else "_${name}"
-        }";
-      in
-        if isAttrs value && value ? base
-        then acc // {"${key}" = value.base;} // mkEnvVars key value
-        else if isString value
-        then acc // {"${key}" = value;}
-        else acc
-    ) {}
-    attrs;
-
-  # generate `cd` aliases from paths
-  # { pictures.base = "/home/craole/Pictures"; }
-  # → pics = "cd /home/craole/Pictures"
-  mkCdAliases = attrs:
-    foldlAttrs (
-      acc: name: value:
-        if isAttrs value && value ? base
-        then acc // {"cd${name}" = "cd ${value.base}";}
-        else acc
-    ) {}
-    attrs;
 in
   exports
