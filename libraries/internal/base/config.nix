@@ -1,14 +1,20 @@
-{attrsets, lists, ...}: let
-exports={
-  global = {inherit  mkLib mkLibs;};
-  scoped = {inherit stem nest mkLib mkLibs;};
-};
-  inherit (attrsets) gets merge ;
-  inherit (lists) head foldl' match asList tail;
+{
+  attrsets,
+  lists,
+  strings,
+  ...
+}: let
+  exports = {
+    global = {inherit mkLib mkLibs;};
+    scoped = {inherit stem nest mkLib mkLibs;};
+  };
+  inherit (attrsets) gets merge;
+  inherit (lists) head foldl' asList tail;
+  inherit (strings) matchRegex;
 
   stem = path: let
     name = baseNameOf (toString path);
-    groups = match "^(.*)\\.nix$" name;
+    groups = matchRegex "^(.*)\\.nix$" name;
   in
     if groups == null
     then name
@@ -31,8 +37,8 @@ exports={
   in
     {
       __raw = imported;
-      __scoped = scoped;
-      __global = global;
+      # __scoped = scoped;
+      # __global = global;
       __value = value;
     }
     // (nest (asList output) value)
@@ -61,4 +67,5 @@ exports={
       };
   in
     foldl' merge base (map mkOne specs);
-in exports
+in
+  exports

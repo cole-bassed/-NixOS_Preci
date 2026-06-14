@@ -13,7 +13,7 @@ let
         }
         {
           input = ./config.nix;
-          dependencies = ["attrsets" "lists"];
+          dependencies = ["attrsets" "lists" "strings"];
         }
         {
           input = ./debug.nix;

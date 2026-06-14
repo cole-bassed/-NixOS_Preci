@@ -26,17 +26,7 @@
   };
 
   inherit (external.flake.modules) mkMods;
-  inherit
-    (attrsets)
-    namesOf
-    filterAttrs
-    genAttrs
-    mapAttrs
-    mapAttrsToList
-    mergeAttrsList
-    optionalAttrs
-    recursiveUpdate
-    ;
+  inherit (attrsets) namesOf filterAttrs genAttrs mapAttrs mapAttrsToList mergeAttrsList optionalAttrs recursiveUpdate;
   inherit (debug) withContext expect;
   inherit (environment) mkSrc;
   inherit (lists) elem foldl' groupBy;

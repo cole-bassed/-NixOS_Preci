@@ -21,7 +21,7 @@
     src = import ./. {flake = {inherit defaults inputs;};};
   in
     {inherit src;}
-    // src.lix.config.flake
+    // src.lix.mkFlake
     src {
       configurations = true;
       utilities = true;

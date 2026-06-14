@@ -14,14 +14,16 @@
           head
           tail
           as
+          sort
+          filter
           ;
         first = head;
         initial = head;
         remaining = tail;
         concat = concatLists;
-        isIn = builtins.elem;
+        isIn = elem;
         select = filter;
-        inherit (builtins) sort filter;
+        inherit (builtins) foldl';
       }
       // exports.global;
 
@@ -34,9 +36,9 @@
     };
   };
 
-  inherit (builtins) concatLists filter head isAttrs tail;
+  inherit (builtins) concatLists elem filter head sort tail;
   inherit (attrsets) namesOf;
-  inherit (types) isList isNotEmpty isString typeOf;
+  inherit (types) isAttrs isList isNotEmpty isString typeOf;
 
   /**
   Coerce a value into a list.

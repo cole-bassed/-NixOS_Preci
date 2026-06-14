@@ -22,6 +22,7 @@ mkLibs {
         "external"
         "systems"
         "flake"
+        "types"
       ];
     }
     {
